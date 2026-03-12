@@ -1,1 +1,1 @@
-# mcpsmith
+# MCPSmithy

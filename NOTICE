@@ -1,0 +1,12 @@
+MCPSmithy
+Copyright 2026 Ruben Vasconcelos
+
+This product includes software developed by:
+
+- kong (https://github.com/alecthomas/kong)
+  Copyright (c) Alec Thomas
+  Licensed under the MIT License
+
+- go-yaml (https://github.com/yaml/go-yaml)
+  Copyright (c) Canonical Ltd and others
+  Licensed under the Apache License 2.0 and MIT License
