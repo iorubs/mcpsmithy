@@ -29,11 +29,13 @@ editor integration and detailed setup.
 
 ### For Users
 
-<!-- TODO: add link to user docs -->
+| | |
+|---|---|
+| [Docs site](https://iorubs.github.io/mcpsmithy/) | Documentation overview |
 
 ### For Contributors
 
 | | |
 |---|---|
-| [mcpsmithy](.mcpsmithy.yaml) | Project sources, conventions, tools, and commands for AI assistants |
+| [.mcpsmithy.yaml](.mcpsmithy.yaml) | Project sources, conventions, tools, and commands for AI assistants |
 | [Development Guide](docs/development/README.md) | Architecture, CLI, config schema, testing, and security |

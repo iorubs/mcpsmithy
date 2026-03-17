@@ -1,19 +1,13 @@
-# Improvements & Future Initiatives Roadmap
+---
+sidebar_position: 1
+---
+
+# Roadmap
 
 Tracked feature ideas, technical debt, and enhancements for
 MCPSmithy.
 
 ## Improvements
-
-### OpenTelemetry observability
-
-**Problem:** Tool call log lines are isolated events. There is no way to correlate them back to the upstream request that triggered them — whether that's a user request hitting a backend API, a job in an agentic workload, or a pipeline step. Each `tool/call done` line has latency and outcome, but no link to the broader execution context it was part of.
-
-**Value:** If MCPSmithy is part of an application stack, e.g. a backend delegates to an agent, the agent calls mcpsmithy tools over HTTP — OTel `traceparent` propagation would let tool calls appear as spans within the originating request's trace. You'd get end-to-end visibility across services: user request → backend → agent → tool call, all in one trace. That's meaningfully different from what log aggregation alone can provide.
-
-**Why parked:** `slog` JSON output is sufficient for the current use cases — local/stdio for individual engineers, and shared HTTP for doc server deployments. The application stack pattern (mcpsmithy embedded inside a product's agentic workload) is a real use case but no one is running it yet. OTel is only worth building once that adoption exists — the SDK adds meaningful binary weight and the integration requires operator infra (Jaeger, Tempo, etc.) to be in place anyway. Revisit when a concrete deployment requires cross-service trace correlation.
-
----
 
 ### Plugin / module system
 
@@ -25,6 +19,16 @@ MCPSmithy.
 
 ---
 
+### OpenTelemetry observability
+
+**Problem:** Tool call log lines are isolated events. There is no way to correlate them back to the upstream request that triggered them — whether that's a user request hitting a backend API, a job in an agentic workload, or a pipeline step. Each `tool/call done` line has latency and outcome, but no link to the broader execution context it was part of.
+
+**Value:** If MCPSmithy is part of an application stack, e.g. a backend delegates to an agent, the agent calls mcpsmithy tools over HTTP — OTel `traceparent` propagation would let tool calls appear as spans within the originating request's trace. You'd get end-to-end visibility across services: user request → backend → agent → tool call, all in one trace. That's meaningfully different from what log aggregation alone can provide.
+
+**Why parked:** `slog` JSON output is sufficient for the current use cases — local/stdio for individual engineers, and shared HTTP for doc server deployments. The application stack pattern (mcpsmithy embedded inside a product's agentic workload) is a real use case but no one is running it yet. OTel is only worth building once that adoption exists — the SDK adds meaningful binary weight and the integration requires operator infra (Jaeger, Tempo, etc.) to be in place anyway. Revisit when a concrete deployment requires cross-service trace correlation.
+
+---
+
 ### Action-capable tool type
 
 **Problem:** mcpsmithy only supports read-only operations. Teams that want AI agents to trigger actions — creating tickets, updating configuration, calling internal APIs — must build separate tooling or rely on the agent's own capabilities, which may lack access to internal systems or safe credential management.
@@ -32,16 +36,6 @@ MCPSmithy.
 **Value:** Would make mcpsmithy a more complete operations platform for a project — not just context retrieval but also audited action execution. Reduces the need for separate agent skill tooling.
 
 **Why parked:** The boundary between what the MCP server should do vs what the agent should handle natively is genuinely unclear — agents already have HTTP and function-calling capabilities, so adding action execution here risks duplicating that layer without clear benefit. It also meaningfully expands the trust surface of the server, which currently has a clean read-only threat model. Needs a concrete use case and a security/capability design pass before it belongs on the active roadmap.
-
----
-
-### Shell Command Execution
-
-**Problem:** Some use cases require running project-specific commands to gather context — running tests, querying build artifacts, generating dynamic output — that can't be served by file reading or templates alone.
-
-**Value:** Would unlock a wide range of dynamic context use cases that are currently impossible without a separate tool server. Power users operating trusted, single-user setups would benefit most.
-
-**Why parked:** Shell execution is the largest security surface in this class of tools — it allows arbitrary code execution on the host. Doing this safely requires a meaningful set of mitigations (sandboxing, output limits, allowlists, credential isolation, replay safety) all designed and implemented together as a coherent security model. The current read-only tools cover the primary use cases without that risk. Parked until a concrete use case emerges that genuinely can't be solved without it.
 
 ---
 
@@ -82,16 +76,6 @@ MCPSmithy.
 **Value:** The MCP spec defines a prompts capability that would allow conventions and docs to be exposed as native, browsable prompts (`prompts/list` and `prompts/get`) — no search needed. Conventions become discoverable as menu items, and non-agent users (humans in VS Code) can browse project context directly.
 
 **Why parked:** Client support for MCP prompts is sparse — most MCP clients don't support the prompts capability yet, limiting the practical benefit to users today.
-
----
-
-### Composite Tool Type
-
-**Problem:** Some queries naturally span multiple tools — for example, looking up a convention and then reading the related doc. Agents handle this through sequential tool calls, but each round-trip adds latency and requires the agent to manage the sequencing explicitly.
-
-**Value:** Reduced latency for known multi-step patterns; simpler agent prompts for fixed, deterministic workflows.
-
-**Why parked:** In practice, LLM clients are better orchestrators than a fixed sequence — they can react to intermediate results, retry failed steps, and adapt based on what each tool returns. A composite tool hides that intermediate state and removes the agent's ability to course-correct.
 
 ---
 

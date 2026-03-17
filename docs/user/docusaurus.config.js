@@ -85,6 +85,11 @@ const config = {
             sidebarId: 'docsSidebar',
             position: 'left',
             label: 'Documentation',
+          }, {
+            href: 'https://github.com/iorubs/mcpsmithy',
+            position: 'right',
+            label: 'GitHub',
+            className: 'header-github-link',
           },
         ],
       },

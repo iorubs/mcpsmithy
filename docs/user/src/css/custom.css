@@ -28,3 +28,27 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+.header-github-link {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-github-link::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  background: url('/img/github.svg') no-repeat center;
+  background-size: contain;
+  filter: brightness(0);
+}
+
+[data-theme='dark'] .header-github-link::before {
+  filter: brightness(0) invert(100%);
+}
+
+.header-github-link [class*='iconExternalLink'] {
+  display: none;
+}
