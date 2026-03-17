@@ -1,0 +1,50 @@
+# Version {{.Version}}
+
+Auto-generated from config struct types and tags.
+{{range $i, $s := .Structs}}
+{{if $i}}
+---
+{{end}}
+## {{$s.Name}}
+{{if $s.Doc}}
+{{$s.Doc}}
+{{end}}
+| Field | Type | Required | Default | Exclusivity | Description |
+|-------|------|----------|---------|-------------|-------------|
+{{- range $s.Fields}}
+| `{{.YAMLName}}` | {{if .TypeRef}}[{{.Type}}](#{{.TypeRef | anchor}}){{else}}{{.Type}}{{end}} | {{.Required}} | {{.Default}} | {{range $i, $g := .OneOfGroups}}{{if $i}}; {{end}}mutually exclusive with {{range $j, $p := $g.Peers}}{{if $j}}, {{end}}`{{$p}}`{{end}}{{end}} | {{.Description | br}}{{if .Min}} (min: {{.Min}}){{end}}{{if .NotReserved}} *(must not be a reserved engine name)*{{end}}{{if .Refs}} *(must reference a declared key in: {{range $i, $r := .Refs}}{{if $i}}, {{end}}{{$r}}{{end}})*{{end}} |
+{{- end}}
+{{end}}
+{{- if .Enums}}
+---
+
+**Enum Reference**
+{{range $i, $e := .Enums}}
+{{if $i}}
+---
+{{end}}
+## {{$e.Name}}
+{{if $e.Doc}}
+{{$e.Doc}}
+{{end}}
+| Value | Description |
+|-------|-------------|
+{{- range $e.Values}}
+| `{{.Label}}` | {{.Doc | br}} |
+{{- end}}
+{{end}}
+{{- end}}
+{{- if .Types}}
+---
+
+**Type Reference**
+{{range $i, $t := .Types}}
+{{if $i}}
+---
+{{end}}
+## {{$t.Name}}
+{{if $t.Doc}}
+{{$t.Doc}}
+{{end}}
+{{end}}
+{{- end}}

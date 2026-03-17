@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "mcpsmithy": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-v", "${workspaceFolder}:/project:ro",
+        "-w", "/project",
+        "mcpsmithy:latest",
+        "serve", "--watch", "--log-level=debug"
+      ]
+    }
+  }
+}

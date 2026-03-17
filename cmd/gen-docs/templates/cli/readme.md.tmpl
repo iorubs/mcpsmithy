@@ -1,0 +1,67 @@
+# Server
+
+{{ define "argTable" -}}
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+{{- range .}}
+| `{{.Name}}` | {{if .Required}}yes{{else}}no{{end}} | {{if .Default}}`{{.Default}}`{{else}}—{{end}} | {{.Help}} |
+{{- end}}
+{{end -}}
+
+{{- define "flagTable" -}}
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+{{- range .}}
+| `{{if .Short}}-{{printf "%c" .Short}}, {{end}}--{{.Name}}` | {{if .Enum}}`enum({{.Enum}})`{{else}}`{{flagType .}}`{{end}} | {{if .Default}}`{{.Default}}`{{else}}—{{end}} | {{.Help}} |
+{{- end}}
+{{end -}}
+
+## {{.Name}}
+
+{{.Help}}
+
+```
+{{.Name}} <command> [flags]
+```
+{{- if .Flags}}
+
+{{template "flagTable" .Flags}}
+{{- end}}
+{{- range .Commands}}
+
+### {{.Name}}
+
+{{.Help}}
+
+```
+mcpsmithy {{.Name}} [flags]
+```
+{{- if .Args}}
+
+{{template "argTable" .Args}}
+{{- end}}
+{{- if .Flags}}
+
+{{template "flagTable" .Flags}}
+{{- end}}
+{{- if .Subcommands}}
+{{- range .Subcommands}}
+
+#### {{.Parent.Name}} {{.Name}}
+
+{{.Help}}
+
+```
+mcpsmithy {{.Parent.Name}} {{.Name}} [flags]
+```
+{{- if .Args}}
+
+{{template "argTable" .Args}}
+{{- end}}
+{{- if .Flags}}
+
+{{template "flagTable" .Flags}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
