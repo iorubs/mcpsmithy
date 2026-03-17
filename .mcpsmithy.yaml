@@ -185,12 +185,13 @@ tools:
     template: |
       Project commands (run from {{ .mcpsmithy.Project.Root }}):
 
-      Build:         go build ./cmd/mcpsmithy
-      Test:          go test -cover ./internal/...
-      Lint:          go vet ./...
-      Validate:      go run ./cmd/mcpsmithy validate
-      Docker build:  docker build -t mcpsmithy:latest .
-      Docker run:    docker run --rm -i -v $(pwd):/project:ro -w /project mcpsmithy:latest serve
+      Build:        go build ./cmd/mcpsmithy
+      Test:         go test -cover ./internal/...
+      Lint:         go vet ./...
+      Validate:     go run ./cmd/mcpsmithy validate
+      Docker build: docker build -t mcpsmithy:latest .
+      Docker run:   docker run --rm -i -v $(pwd):/project:ro -w /project mcpsmithy:latest serve
+      Docs Gen:     go run ./cmd/gen-docs
 
       Docs build image:  docker build -t mcpsmithy-docs:latest docs/user
       Docs dev server:   docker run --rm -it -p 3000:3000 -v $(pwd)/docs/user:/docs mcpsmithy-docs:latest
