@@ -1,0 +1,321 @@
+# Config
+
+Auto-generated schema and authoring reference for `.mcpsmithy.yaml`.
+
+## Schema Versions
+{{range .Versions}}
+- [{{.Label}}](v{{.Version}}.md)
+{{- end}}
+
+---
+
+{{readSection "guide"}}
+
+---
+
+{{readSection "project"}}
+
+#### Local sources
+
+Structure and docs from the local workspace. Set `index: false` on
+source code the agent can already read with its editor tools.
+
+```yaml
+project:
+  name: "my-service"
+  description: "A backend service with REST API"
+  sources:
+    local:
+      source:
+        paths: ["cmd/**", "internal/**", "pkg/**"]
+        description: "Application source code"
+        index: false
+      docs:
+        paths: ["docs/**/*.md", "README.md"]
+        description: "Project documentation"
+```
+
+#### Git sources
+
+Pull docs or config from another repository. Uses git clone under the
+hood — credentials come from SSH keys, credential helpers, or `.netrc`.
+
+```yaml
+project:
+  name: "my-service"
+  description: "A backend service that follows platform conventions"
+  sources:
+    git:
+      platform-docs:
+        repo: "https://github.com/org/platform-docs.git"
+        ref: "main"
+        paths: ["docs/**/*.md"]
+        description: "Platform engineering documentation"
+      runbooks:
+        repo: "git@github.com:org/runbooks.git"
+        ref: "main"
+        paths: ["services/my-service/**/*.md"]
+        description: "Operational runbooks for this service"
+        depth: 1
+```
+
+#### HTTP sources
+
+Fetch archives or files from any authenticated HTTP endpoint — forge
+archive URLs, artifact stores, private APIs. Auth via `.netrc` or
+custom headers.
+
+```yaml
+project:
+  name: "my-service"
+  description: "Service with external API specs"
+  sources:
+    http:
+      api-spec:
+        url: "https://gitlab.com/api/v4/projects/org%2Fapi-spec/repository/archive.tar.gz?sha=main"
+        paths: ["**/*.yaml"]
+        description: "OpenAPI specs from the API spec repo"
+      design-system:
+        url: "https://github.com/org/design-system/archive/refs/heads/main.tar.gz"
+        paths: ["docs/**/*.md"]
+        description: "Design system documentation"
+```
+
+#### Scrape sources
+
+Crawl external doc sites. Useful for vendor docs or internal wikis
+that aren't in a git repo.
+
+```yaml
+project:
+  name: "my-service"
+  description: "Service that integrates with external APIs"
+  sources:
+    scrape:
+      vendor-api:
+        urls: ["https://docs.vendor.com/api/v2"]
+        description: "Vendor API reference"
+        maxDepth: 2
+        maxPages: 50
+      internal-wiki:
+        urls: ["https://wiki.internal/platform/my-service"]
+        description: "Internal wiki pages for this service"
+        maxPages: 20
+```
+
+---
+
+{{readSection "conventions"}}
+
+#### Task-oriented convention with docs
+
+Scope maps a file path to rules and documentation. The description
+says what to do — the linked docs provide the full detail.
+
+```yaml
+conventions:
+  config-schema:
+    scope: "internal/config/**"
+    description: |
+      Versioned YAML config with strict parsing — unknown keys are errors.
+      Adding a new config field:
+        1. Add the field to the latest version types
+        2. Add a default if needed
+        3. Add validation
+        4. Run the tests
+    docs:
+      - source: docs
+        paths: ["docs/development/config.md"]
+    tags: ["config"]
+    relations:
+      - target: tool-engine
+        description: "Config defines tool and param declarations consumed by the engine"
+```
+
+#### Convention graph for documentation
+
+Conventions don't have to map to code paths. They can model a
+knowledge graph over doc sections — each convention is a topic with
+relations to other topics.
+
+```yaml
+conventions:
+  overview:
+    scope: "docs/overview/**"
+    description: "Architecture and high-level concepts."
+    tags: ["architecture"]
+    relations:
+      - target: "features"
+        description: "Architecture explains the features"
+      - target: "api-reference"
+        description: "Architecture references the API surface"
+
+  features:
+    scope: "docs/features/**"
+    description: "Feature guides by area — auth, deployment, networking."
+    tags: ["how-to"]
+    relations:
+      - target: "api-reference"
+        description: "Feature guides reference API specs"
+```
+
+---
+
+{{readSection "tools"}}
+
+Both `conventions` and `tools` are required. A valid config needs at
+least one entry in each.
+
+#### Local mode (stdio) — agent has workspace access
+
+When the agent already has file and terminal tools (VS Code, Cursor,
+etc.), mcpsmithy adds the project context layer. Use `file_read`
+only for content outside the workspace (git/scrape sources).
+
+```yaml
+tools:
+  project_info:
+    description: |
+      Platform overview, convention map, and source inventory.
+      ALWAYS call this tool first — it establishes the context needed
+      for all subsequent tool calls.
+    template: |
+      {{"{{ .mcpsmithy.Project }}"}}
+
+      Tools:
+      {{"{{ .mcpsmithy.Tools }}"}}
+
+      Conventions:
+      {{"{{ .mcpsmithy.Conventions }}"}}
+
+  find_convention:
+    description: |
+      Match a file path to related conventions and indexed content.
+      Use when unsure which rules apply to the code you're editing.
+    template: |
+      {{"{{ conventions_for .path }}"}}
+
+      Related indexed content:
+      {{"{{ search_for .path .maxResults .maxResultSize }}"}}
+    params:
+      - name: "path"
+        type: "string"
+        required: true
+        description: "File path relative to project root (e.g. internal/api/handler.go)"
+    options:
+      maxResults: 5
+      maxResultSize: 2048
+
+  search:
+    description: |
+      Search across all indexed sources. Returns matching conventions
+      and content from docs, runbooks, and any other indexed source.
+    template: "{{"{{ search_for .query .maxResults .maxResultSize }}"}}"
+    params:
+      - name: "query"
+        type: "string"
+        required: true
+        description: "Keywords, error messages, or file names to search for"
+    options:
+      maxResults: 10
+      maxResultSize: 2048
+
+  project_commands:
+    description: "Build, test, and lint commands with rules."
+    template: |
+      Build:  go build ./...
+      Test:   go test -cover ./...
+      Lint:   golangci-lint run ./...
+
+      Rules:
+      - Always run tests with -cover.
+      - Write tests alongside code, not after.
+
+  ci_log:
+    description: |
+      Fetch and filter CI/CD job logs. CI logs often surface multiple
+      errors; the root cause typically appears first — focus on the
+      earliest match.
+    template: "{{"{{ http_get .traceUrl | grep .pattern .before .after }}"}}"
+    params:
+      - name: "traceUrl"
+        type: "string"
+        required: true
+        description: >-
+          CI job trace API URL. For GitLab:
+          https://<host>/api/v4/projects/<url-encoded-path>/jobs/<id>/trace.
+          Extract project path and job ID from the browser URL.
+      - name: "pattern"
+        type: "string"
+        required: true
+        description: "Regex to filter log lines (e.g. 'error|fatal|FAIL')"
+      - name: "before"
+        type: "int"
+        default: 10
+        description: "Context lines before each match"
+      - name: "after"
+        type: "int"
+        default: 10
+        description: "Context lines after each match"
+```
+
+#### Remote mode (HTTP/SSE) — agent has no workspace access
+
+When the agent connects over HTTP (docs server, agentic backend),
+it has no filesystem access. Expose `read_doc` and `search` so the
+agent can discover and read content. `file_read` is essential here
+because the agent has no other way to access the files.
+
+```yaml
+tools:
+  project_info:
+    description: |
+      Documentation map and available conventions.
+      ALWAYS call this tool first — it establishes the context needed
+      for all subsequent tool calls.
+    template: |
+      {{"{{ .mcpsmithy.Project }}"}}
+
+      Conventions:
+      {{"{{ range $k, $v := .mcpsmithy.Conventions }}"}}
+      {{"{{ $k }}"}}:
+        description: {{"{{ $v.Description }}"}}
+        scope: {{"{{ $v.Scope }}"}}
+      {{"{{ end }}"}}
+
+  search:
+    description: |
+      Search all indexed sources by keyword. Returns ranked results
+      with matching conventions, titles, and snippets.
+    template: "{{"{{ search_for .query .maxResults .maxResultSize }}"}}"
+    params:
+      - name: "query"
+        type: "string"
+        required: true
+        description: "Search terms (e.g. 'deploy application')"
+    options:
+      maxResults: 10
+      maxResultSize: 400
+
+  read_doc:
+    description: |
+      Read the full content of a file by path. Use after search to
+      get the complete document.
+    template: "{{"{{ file_read .path .maxFileSize }}"}}"
+    params:
+      - name: "path"
+        type: "string"
+        required: true
+        description: "Path from search results (e.g. docs/features/deployment.md)"
+    options:
+      maxFileSize: 50
+
+  find_convention:
+    description: "Returns full details for a convention by name."
+    template: "{{"{{ index .mcpsmithy.Conventions .name }}"}}"
+    params:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Convention name from project_info"
+```

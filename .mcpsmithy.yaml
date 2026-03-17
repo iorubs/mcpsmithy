@@ -1,0 +1,207 @@
+version: "1"
+
+project:
+  name: "MCPSmithy"
+  description: "Config-driven MCP tool server in Go. Build and serves MCP tools using .mcpsmithy.yaml."
+  sources:
+    local:
+      internal:
+        paths: ["internal/**/*.go"]
+        description: "All internal packages"
+      mcpsmithy:
+        paths: ["cmd/mcpsmithy/**/*.go"]
+        description: "MCP server entry point — reads config, serves tools via stdio"
+      gen-docs:
+        paths: ["cmd/gen-docs/**/*.go", "cmd/gen-docs/templates/**"]
+        description: "Documentation generator — renders config and CLI docs from schema"
+      tests:
+        paths: ["internal/**/*_test.go"]
+        description: "Stdlib table-driven unit tests"
+      config:
+        paths: ["go.mod", "go.sum", "Dockerfile", ".mcpsmithy.yaml", ".vscode/mcp.json"]
+        description: "Build, container, and tooling config"
+      developer-docs:
+        paths: ["docs/development/**/*.md"]
+        description: "Developer docs (architecture, schema, versioning, security)"
+      user-docs:
+        paths: ["docs/user/**/*.md", "README.md"]
+        description: "User docs (overview, getting-started, reference, examples)"
+
+conventions:
+  code-style:
+    scope: "**/*.go"
+    docs:
+      - source: developer-docs
+        paths:
+          - docs/development/README.md
+          - docs/development/testing.md
+    description: |
+      This project has coding conventions (naming, comments, dependencies,
+      logging, error messages) and testing conventions (patterns, helpers, coverage).
+      Read the docs before writing or modifying code — follow what's there,
+      don't invent new patterns.
+      Design docs and code must stay in sync — update docs when you change
+      behaviour.
+
+  documentation:
+    scope: "*"
+    docs:
+      - source: developer-docs
+      - source: user-docs
+      - source: gen-docs
+    description: |
+      Design docs and code must stay in sync — update docs when you change
+      behaviour.
+
+      Documentation lives in three layers with distinct audiences:
+      - docs/user/ (+ README.md) — end users: install, configure, use.
+        Never reference internals (package paths, struct names, etc.).
+      - docs/development/ — contributors: architecture, design decisions,
+        tag specs, extension guides. This is where specifications live.
+      - Code comments: never add redundant comments. Follow the conventions outlined in the docs.
+      - Config versioning lives in internal/config and internal/commands; use tags and gen-docs to generate user config and CLI user reference docs.
+      Don't duplicate across layers. When writing or reviewing docs, ask
+      "who is the reader?" and put the content in the right place.
+
+  tool-engine:
+    scope: "internal/tools/**"
+    docs:
+      - source: developer-docs
+        paths:
+          - docs/development/config.md
+          - docs/development/security.md
+    description: |
+      Tool execution, template rendering, and sandbox.
+      Read security.md before changing sandbox or path validation.
+
+      When a tool is invoked the engine resolves it to a Go template,
+      injects the reserved context key (mcpsmithy — a nested struct
+      exposing project info, conventions, tools, and a Source() method)
+      plus any user params, renders the template, and returns the output.
+
+      Built-in template functions: conventions_for, search_for,
+      file_read, http_get, grep. Config authors can compose richer
+      output using context access ({{ .mcpsmithy.Project }},
+      {{ .mcpsmithy.Conventions }}, {{ .mcpsmithy.Tools }},
+      {{ .mcpsmithy.Source "name" }}).
+
+      To add a new built-in function, follow the checklist in
+      config.md under "Adding a New Built-in Function".
+    relations:
+      - target: config-schema
+        description: "New function params may need config types"
+
+  config-schema:
+    scope: "internal/config/**"
+    docs:
+      - source: developer-docs
+        paths:
+          - docs/development/config.md
+    description: |
+      Versioned YAML config with strict parsing — unknown keys are errors.
+
+      On startup the loader reads the YAML, checks the version field,
+      and hands off to the matching versioned parser. That parser does
+      a strict decode, applies tag-driven defaults, validates required
+      fields and enum values (all powered by the mcpsmithy struct tag),
+      runs any extra semantic checks, and returns a typed config.
+      Downstream code only ever sees type aliases from config.go — it
+      never imports a versioned package directly.
+
+      The mcpsmithy tag is the single source of truth for defaults,
+      required checks, and generated reference docs.
+
+      See config.md for how to add a new field, function, or version.
+    relations:
+      - target: tool-engine
+        description: "Config defines tool and param declarations"
+      - target: sources-search
+        description: "Config defines source declarations"
+
+  sources-search:
+    scope: "internal/project/**"
+    docs:
+      - source: developer-docs
+        paths:
+          - docs/development/architecture.md
+    description: |
+      Sources indexing and search — powers the search_for function.
+
+      Behaviour depends on syncInterval (default 0):
+      - syncInterval 0: blocks at startup — fetches all sources, builds
+        a full BM25 index, then starts serving.
+      - syncInterval > 0: returns immediately after indexing local
+        sources; remote sources load in background goroutines. A
+        refresh loop re-indexes all sources every N minutes.
+
+      pullPolicy (per-source with global fallback) governs fetching:
+      always, ifNotPresent, or never. When an agent calls search_for
+      at runtime it queries the current in-memory index via
+      IndexManager (atomic pointer swap for safe concurrent access).
+
+      To wire new source options into the config layer, follow the
+      checklist in config.md under "Adding a New Config Field".
+    relations:
+      - target: config-schema
+        description: "Sources are declared in config"
+      - target: tool-engine
+        description: "search_for queries this index"
+
+tools:
+  project_info:
+    description: "Returns project name, description, root path, sources overview, and all conventions. Call at the start of every session AND whenever you are unsure about project layout or rules. Re-call if context feels stale."
+    template: |
+      {{ .mcpsmithy.Project }}
+
+      tools:
+      {{ .mcpsmithy.Tools }}
+
+      Conventions:
+      {{ .mcpsmithy.Conventions }}
+
+  find_convention:
+    description: "Returns conventions for a specific file path. Call when you are about to read, create, or modify a file — conventions differ per directory. Shows matching conventions with their scope, description, docs, and relations."
+    template: "{{ conventions_for .path }}"
+    params:
+      - name: "path"
+        type: "string"
+        required: true
+        description: "File path to check conventions for"
+
+  search:
+    description: "Search sources and conventions by keyword. Returns matching conventions first (ranked by relevance), then source docs. Use when planning, exploring a topic, or deciding how to approach a task — conventions surface early so you can factor them into your plan."
+    template: "{{ search_for .query .maxResults .maxResultSize }}"
+    options:
+      maxResults: 5
+      maxResultSize: 500
+    params:
+      - name: "query"
+        type: "string"
+        required: true
+        description: "Search terms (e.g. 'config versioning', 'sandbox security')"
+
+  project_commands:
+    description: "Returns how to build, test, and operate in this project. Call before running any command. Follow these rules — do not improvise."
+    template: |
+      Project commands (run from {{ .mcpsmithy.Project.Root }}):
+
+      Build:         go build ./cmd/mcpsmithy
+      Test:          go test -cover ./internal/...
+      Lint:          go vet ./...
+      Validate:      go run ./cmd/mcpsmithy validate
+      Docker build:  docker build -t mcpsmithy:latest .
+      Docker run:    docker run --rm -i -v $(pwd):/project:ro -w /project mcpsmithy:latest serve
+
+      Docs build image:  docker build -t mcpsmithy-docs:latest docs/user
+      Docs dev server:   docker run --rm -it -p 3000:3000 -v $(pwd)/docs/user:/docs mcpsmithy-docs:latest
+      Docs build static: docker run --rm -v $(pwd)/docs/user:/docs mcpsmithy-docs:latest npm run build
+
+      Rules:
+      - Always run tests with -cover. Check that coverage does not regress.
+      - When writing new code, write tests alongside it — not after.
+      - Never redirect to /tmp or temp files.
+      - Do not use sed for file edits — use your edit tools instead.
+      - Do not use find -exec with shell expansion — use simple globs or grep.
+      - Prefer go test flags over shell wrappers (e.g. -run, -count, -race).
+      - All output goes to stdout. Do not tee, redirect, or swallow output.
+      - If a command fails, show the error — do not retry silently.

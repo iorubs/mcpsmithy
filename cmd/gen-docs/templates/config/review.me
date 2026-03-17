@@ -1,0 +1,183 @@
+# Configuration
+
+This guide walks through creating your first `.mcpsmithy.yaml`.
+
+## Minimal config
+
+Create `.mcpsmithy.yaml` in your project root:
+
+```yaml
+version: "1"
+
+project:
+  name: "my-project"
+  description: "A short description of what this project does"
+
+tools:
+  project_info:
+    description: "Returns project overview."
+    template: |
+      Project: {{ .mcpsmithy.Project.Name }}
+      Description: {{ .mcpsmithy.Project.Description }}
+      Root: {{ .mcpsmithy.Project.Root }}
+```
+
+Validate it:
+
+```bash
+mcpsmithy validate
+```
+
+That's a working MCP server. The AI can call `project_info` to learn
+about your project. Let's make it more useful.
+
+## Add sources
+
+Tell the AI where things live and index content for search:
+
+```yaml
+project:
+  name: "my-project"
+  description: "A short description of what this project does"
+  sources:
+    local:
+      source:
+        paths: ["cmd/**/*.go", "internal/**/*.go"]
+        description: "Go CLI entry points and library packages"
+        index: false
+      tests:
+        paths: ["**/*_test.go"]
+        description: "Go stdlib table-driven unit tests"
+        index: false
+      docs:
+        paths: ["docs/**/*.md"]
+        description: "Project documentation"
+```
+
+Sources with `index: false` describe project structure without being
+indexed for search. Sources with `index: true` (the default) are
+indexed into a BM25 search index. Use `search_for` in templates to
+query the index and `{{ .mcpsmithy.Source "name" }}` to surface
+source descriptions.
+
+Sources are nested under `project:` and grouped by type — `local` for
+files on disk, `scrape` for URLs, `git` for repositories, `http` for
+generic HTTP endpoints (archive downloads, private APIs, etc.).
+
+## Add conventions
+
+Map file paths to docs and rules:
+
+```yaml
+conventions:
+  internal-arch:
+    scope: "internal/**"
+    docs:
+      - source: "docs"
+        paths: ["docs/architecture.md"]
+    description: "Internal packages follow hexagonal architecture."
+
+  testing:
+    scope: "**/*_test.go"
+    docs:
+      - source: "docs"
+        paths: ["docs/testing.md"]
+    description: "Tests use stdlib testing. Table-driven preferred."
+
+  global:
+    scope: "*"
+    docs:
+      - source: "docs"
+        paths: ["docs/contributing.md"]
+    description: "Run make lint before committing."
+```
+
+Each convention is keyed by name. The `docs` field references a
+declared source by name (e.g. the `docs` source from `project.sources.local`),
+optionally narrowed to specific paths.
+
+The `conventions_for` template function matches file paths against
+scopes, so the AI reads the right docs before changing code.
+
+## Add remote sources
+
+Remote sources let the AI search content outside the local workspace:
+
+```yaml
+project:
+  name: "my-project"
+  description: "A short description of what this project does"
+  sources:
+    git:
+      upstream:
+        repo: "https://github.com/org/docs.git"
+        paths: ["docs/**/*.md"]
+        description: "Upstream documentation"
+    scrape:
+      api-docs:
+        urls: ["https://docs.example.com/api"]
+        description: "API reference"
+```
+
+Sources are grouped by type — `local` for files on disk, `scrape`
+for URLs, `git` for repositories.
+
+### Private repositories
+
+For private git sources, create a `~/.netrc` entry with a personal
+access token:
+
+```
+machine github.com login <any> password <PAT>
+machine gitlab.com login <any> password <PAT>
+```
+
+Git sources use your existing git credentials (SSH keys, credential
+helpers, or HTTPS via `~/.netrc`) — no extra config needed.
+For tarball downloads without the `git` binary, use an HTTP source instead.
+
+## Add tools
+
+Tools are what the AI actually calls. Each tool uses a `template:`
+field — a Go text/template that can call built-in functions and
+access the project context:
+
+```yaml
+tools:
+  # context access — project info from the config
+  project_info:
+    description: "Returns project overview."
+    template: |
+      Project: {{ .mcpsmithy.Project.Name }}
+      Description: {{ .mcpsmithy.Project.Description }}
+
+  # built-in function — conventions for a file path
+  find_convention:
+    description: "Returns conventions for a file path."
+    template: "{{ conventions_for .path }}"
+    params:
+      - name: "path"
+        type: "string"
+        required: true
+
+  # composition — fetch a URL and filter with grep
+  ci_log:
+    description: "Fetch and filter a CI log."
+    template: "{{ http_get .url | grep .pattern 10 10 }}"
+    params:
+      - name: "url"
+        type: "string"
+        required: true
+      - name: "pattern"
+        type: "string"
+        required: true
+
+  # file_read — for content the AI cannot access directly
+  read_docs:
+    description: "Read design docs."
+    template: "{{ file_read .path }}"
+    params:
+      - name: "path"
+        type: "string"
+        required: true
+```

@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: go test ./...
+
+  gen-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Generate docs
+        run: go run ./cmd/gen-docs/
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Generated docs are out of date. Run 'go run ./cmd/gen-docs/' and commit the changes."
+            git diff
+            exit 1
+          fi
