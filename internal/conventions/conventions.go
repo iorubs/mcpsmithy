@@ -5,6 +5,7 @@ package conventions
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"strings"
 
 	"github.com/operator-assistant/mcpsmithy/internal/config"
@@ -12,18 +13,43 @@ import (
 	"github.com/operator-assistant/mcpsmithy/internal/search"
 )
 
+// sourcesDir is the directory under the project root where fetched sources are stored.
+const sourcesDir = ".mcpsmithy"
+
 // BuildIndex creates a search index from the conventions map.
 // Conventions are indexed independently so they are always surfaced
 // prominently in search results, regardless of BM25 scores from source docs.
-func BuildIndex(ctx context.Context, conventions map[string]config.Convention) search.Searcher {
+func BuildIndex(ctx context.Context, cfg *config.Config) search.Searcher {
+	var srcs *config.ProjectSources
+	if cfg != nil {
+		srcs = cfg.Project.Sources
+	}
+	prefixes := sourcePrefixes(srcs)
+
+	var conventions map[string]config.Convention
+	if cfg != nil {
+		conventions = cfg.Conventions
+	}
+
 	var chunks []search.Chunk
 	for name, c := range conventions {
 		var docStrings []string
 		for _, d := range c.Docs {
+			prefix := prefixes[d.Source]
 			if len(d.Paths) > 0 {
-				docStrings = append(docStrings, d.Paths...)
+				for _, p := range d.Paths {
+					if prefix != "" {
+						docStrings = append(docStrings, filepath.Join(prefix, p))
+					} else {
+						docStrings = append(docStrings, p)
+					}
+				}
 			} else {
-				docStrings = append(docStrings, d.Source)
+				if prefix != "" {
+					docStrings = append(docStrings, prefix)
+				} else {
+					docStrings = append(docStrings, d.Source)
+				}
 			}
 		}
 		chunks = append(chunks, search.Chunk{
@@ -38,6 +64,25 @@ func BuildIndex(ctx context.Context, conventions map[string]config.Convention) s
 	idx := search.NewIndex(chunks)
 	slog.InfoContext(ctx, "convention index built", "chunks", idx.Len())
 	return idx
+}
+
+// sourcePrefixes builds a map of source name -> cache path prefix for
+// non-local sources (git, http, scrape). Local sources have no prefix.
+func sourcePrefixes(srcs *config.ProjectSources) map[string]string {
+	m := make(map[string]string)
+	if srcs == nil {
+		return m
+	}
+	for name := range srcs.Git {
+		m[name] = filepath.Join(sourcesDir, "git", name)
+	}
+	for name := range srcs.HTTP {
+		m[name] = filepath.Join(sourcesDir, "http", name)
+	}
+	for name := range srcs.Scrape {
+		m[name] = filepath.Join(sourcesDir, "scrape", name)
+	}
+	return m
 }
 
 // scopeTags derives search tags from a convention's scope path.

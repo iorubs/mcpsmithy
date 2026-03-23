@@ -7,6 +7,7 @@ import (
 	"context"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -114,7 +115,7 @@ func readFS(fsys fs.FS, globs []string, prefix string) ([]RawDoc, error) {
 		}
 		src := f
 		if prefix != "" {
-			src = prefix + ":" + f
+			src = filepath.Join(prefix, f)
 		}
 		docs = append(docs, RawDoc{Source: src, Content: string(data)})
 	}

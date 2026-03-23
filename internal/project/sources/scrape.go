@@ -18,13 +18,15 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+const sourceKindScrape = "scrape"
+
 func init() {
-	DefaultRegistry.Register("scrape", func(name string, raw any, _, baseDir string, global config.PullPolicy) (Source, SourceMeta, error) {
+	DefaultRegistry.Register(sourceKindScrape, func(name string, raw any, _, baseDir string, global config.PullPolicy) (Source, SourceMeta, error) {
 		src, ok := raw.(config.ScrapeSource)
 		if !ok {
 			return nil, SourceMeta{}, fmt.Errorf("scrape source %q: unexpected config type %T", name, raw)
 		}
-		destDir := filepath.Join(baseDir, "scrape", name)
+		destDir := filepath.Join(baseDir, sourceKindScrape, name)
 		return &ScrapeSource{
 				urls: src.URLs,
 				opts: ScrapeOptions{
@@ -35,8 +37,9 @@ func init() {
 				destDir: destDir,
 				policy:  resolvePolicy(src.PullPolicy, global),
 			}, SourceMeta{
-				NoIndex:   src.Index != nil && !*src.Index,
-				ReadGlobs: []string{"*.md"},
+				NoIndex:    src.Index != nil && !*src.Index,
+				ReadGlobs:  []string{"*.md"},
+				ReadPrefix: destDir,
 			}, nil
 	})
 }

@@ -33,7 +33,7 @@ func New(ctx context.Context, cfg *config.Config, root string) (*Engine, error) 
 	}
 
 	idxMgr, _ := project.Build(ctx, cfg, sb.Root(), project.BuildOptions{})
-	convIdx := conventions.BuildIndex(ctx, cfg.Conventions)
+	convIdx := conventions.BuildIndex(ctx, cfg)
 	tpl := newTemplateEngine(cfg, sb.Root(), cfg.Conventions, idxMgr, convIdx, sb.fsys)
 
 	e := &Engine{

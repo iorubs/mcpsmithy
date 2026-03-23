@@ -28,7 +28,7 @@ func testEngineFS(t *testing.T, cfg *config.Config, fsys fs.FS) *Engine {
 	t.Helper()
 	sb := &sandbox{root: "/project", fsys: fsys}
 	idx, _ := project.Build(context.Background(), cfg, sb.Root(), project.BuildOptions{})
-	convIdx := conventions.BuildIndex(context.Background(), cfg.Conventions)
+	convIdx := conventions.BuildIndex(context.Background(), cfg)
 	tpl := newTemplateEngine(cfg, sb.Root(), cfg.Conventions, idx, convIdx, sb.fsys)
 
 	e := &Engine{
