@@ -19,6 +19,7 @@ import (
 
 	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
 	v1 "github.com/operator-assistant/mcpsmithy/internal/config/v1"
+	"github.com/operator-assistant/mcpsmithy/internal/config/v2alpha"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -31,29 +32,30 @@ const (
 
 	// Constant aliases — re-export values so consumers never import v1 directly.
 	// PullPolicy values control when external sources are fetched.
-	PullPolicyAlways       = v1.PullPolicyAlways
-	PullPolicyIfNotPresent = v1.PullPolicyIfNotPresent
-	PullPolicyNever        = v1.PullPolicyNever
+	PullPolicyAlways       = v2alpha.PullPolicyAlways
+	PullPolicyIfNotPresent = v2alpha.PullPolicyIfNotPresent
+	PullPolicyNever        = v2alpha.PullPolicyNever
 
 	// ParamType values for tool parameter types.
-	ParamTypeString          = v1.ParamTypeString
-	ParamTypeNumber          = v1.ParamTypeNumber
-	ParamTypeBool            = v1.ParamTypeBool
-	ParamTypeArray           = v1.ParamTypeArray
-	ParamTypeProjectFilePath = v1.ParamTypeProjectFilePath
+	ParamTypeString          = v2alpha.ParamTypeString
+	ParamTypeNumber          = v2alpha.ParamTypeNumber
+	ParamTypeBool            = v2alpha.ParamTypeBool
+	ParamTypeArray           = v2alpha.ParamTypeArray
+	ParamTypeProjectFilePath = v2alpha.ParamTypeProjectFilePath
 
 	// BuiltinFunc names — the template functions available inside tool templates.
-	BuiltinFuncConventionsFor = v1.BuiltinFuncConventionsFor
-	BuiltinFuncSearchFor      = v1.BuiltinFuncSearchFor
-	BuiltinFuncFileRead       = v1.BuiltinFuncFileRead
-	BuiltinFuncHTTPGet        = v1.BuiltinFuncHTTPGet
-	BuiltinFuncGrep           = v1.BuiltinFuncGrep
+	BuiltinFuncConventionsFor = v2alpha.BuiltinFuncConventionsFor
+	BuiltinFuncSearchFor      = v2alpha.BuiltinFuncSearchFor
+	BuiltinFuncFileRead       = v2alpha.BuiltinFuncFileRead
+	BuiltinFuncHTTPGet        = v2alpha.BuiltinFuncHTTPGet
+	BuiltinFuncGrep           = v2alpha.BuiltinFuncGrep
 )
 
 // Versions is the single source of truth for which schema versions are
 // accepted. Each entry satisfies [VersionSchema].
 var Versions = map[string]VersionSchema{
-	v1.Version: v1.Schema{},
+	v1.Version:      v1.Schema{},
+	v2alpha.Version: v2alpha.Schema{},
 }
 
 // VersionSchema is the contract each config version must satisfy.
@@ -66,27 +68,27 @@ type VersionSchema interface {
 
 // TypesSources returns the raw Go source files for the latest version's types.
 // Callers that only need the latest version can use this directly.
-var TypesSources = v1.TypesSources
+var TypesSources = v2alpha.TypesSources
 
 // Type aliases — always point to the latest version.
 type (
-	Config              = v1.Config
-	Project             = v1.Project
-	DocRef              = v1.DocRef
-	Convention          = v1.Convention
-	ConventionRelations = v1.ConventionRelations
-	ProjectSources      = v1.ProjectSources
-	LocalSource         = v1.LocalSource
-	ScrapeSource        = v1.ScrapeSource
-	GitSource           = v1.GitSource
-	HTTPSource          = v1.HTTPSource
-	Tool                = v1.Tool
-	ToolParam           = v1.ToolParam
-	ParamConstraints    = v1.ParamConstraints
-	TemplateString      = v1.TemplateString
-	PullPolicy          = v1.PullPolicy
-	ParamType           = v1.ParamType
-	BuiltinFunc         = v1.BuiltinFunc
+	Config              = v2alpha.Config
+	Project             = v2alpha.Project
+	DocRef              = v2alpha.DocRef
+	Convention          = v2alpha.Convention
+	ConventionRelations = v2alpha.ConventionRelations
+	ProjectSources      = v2alpha.ProjectSources
+	LocalSource         = v2alpha.LocalSource
+	ScrapeSource        = v2alpha.ScrapeSource
+	GitSource           = v2alpha.GitSource
+	HTTPSource          = v2alpha.HTTPSource
+	Tool                = v2alpha.Tool
+	ToolParam           = v2alpha.ToolParam
+	ParamConstraints    = v2alpha.ParamConstraints
+	TemplateString      = v2alpha.TemplateString
+	PullPolicy          = v2alpha.PullPolicy
+	ParamType           = v2alpha.ParamType
+	BuiltinFunc         = v2alpha.BuiltinFunc
 )
 
 // Parse parses raw YAML bytes, detects the version, delegates to the

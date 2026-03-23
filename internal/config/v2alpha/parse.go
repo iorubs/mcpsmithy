@@ -1,13 +1,11 @@
-package v1
+package v2alpha
 
 import (
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
-	"github.com/operator-assistant/mcpsmithy/internal/config/v2alpha"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -21,31 +19,21 @@ var typesSource string
 var TypesSources = []string{typesSource, schema.ParamTypeSource}
 
 // Schema satisfies the config.VersionSchema interface for v1.
+// Since v2alpha is the latest version, Parse returns directly without conversion.
 type Schema struct{}
 
 // Parse parses raw YAML bytes into a v1 Config, applies defaults, and
 // runs tag-driven validation. Returns a joined error containing all
 // validation errors, or nil if the config is valid.
-func (Schema) Parse(data []byte) (*v2alpha.Config, error) {
+func (Schema) Parse(data []byte) (*Config, error) {
 	var cfg Config
 	if err := yaml.Load(data, &cfg, yaml.WithKnownFields()); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
 	}
 
 	errs := schema.Process(&cfg)
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
-	}
 
-	v2alphaCfg, err := convert(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("converting config: %w", err)
-	}
-	v2alphaCfg.Version = v2alpha.Version
-
-	errs = schema.Process(&v2alphaCfg)
-
-	return v2alphaCfg, errors.Join(errs...)
+	return &cfg, errors.Join(errs...)
 }
 
 // RootType returns the zero value of the v1 root config type.
@@ -53,22 +41,3 @@ func (Schema) RootType() any { return Config{} }
 
 // TypesSources returns the raw Go sources for this version's types.
 func (Schema) TypesSources() []string { return TypesSources }
-
-// this is slower and not as type safe as doing the firlds one by one>
-// conventions := make(map[string]v2alpha.Convention)
-//
-//	for k, v := range cfg.Conventions {
-//		conventions[k] = v2alpha.Convention{
-//			Scope:       v.Scope,
-//			Description: v.Description,
-//			// Docs:        v2alpha.DocRef(v.Docs),
-//			Tags: v.Tags,
-//			// Relations:   v2alpha.ConventionRelations(v.Relations),
-//		}
-//	}
-func convert(src Config) (*v2alpha.Config, error) {
-	data, _ := json.Marshal(src)
-	var dst v2alpha.Config
-	err := json.Unmarshal(data, &dst)
-	return &dst, err
-}
