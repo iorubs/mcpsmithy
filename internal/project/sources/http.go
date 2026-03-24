@@ -16,13 +16,15 @@ import (
 	"github.com/operator-assistant/mcpsmithy/internal/config"
 )
 
+const sourceKindHTTP = "http"
+
 func init() {
-	DefaultRegistry.Register("http", func(name string, raw any, _, baseDir string, global config.PullPolicy) (Source, SourceMeta, error) {
+	DefaultRegistry.Register(sourceKindHTTP, func(name string, raw any, _, baseDir string, global config.PullPolicy) (Source, SourceMeta, error) {
 		src, ok := raw.(config.HTTPSource)
 		if !ok {
 			return nil, SourceMeta{}, fmt.Errorf("http source %q: unexpected config type %T", name, raw)
 		}
-		destDir := filepath.Join(baseDir, "http", name)
+		destDir := filepath.Join(baseDir, sourceKindHTTP, name)
 		return &HTTPSource{
 				rawURL:  src.URL,
 				headers: src.Headers,
@@ -32,7 +34,7 @@ func init() {
 			}, SourceMeta{
 				NoIndex:    src.Index != nil && !*src.Index,
 				ReadGlobs:  src.Paths,
-				ReadPrefix: src.URL,
+				ReadPrefix: destDir,
 			}, nil
 	})
 }

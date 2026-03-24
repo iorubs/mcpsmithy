@@ -75,8 +75,7 @@ func Build(ctx context.Context, cfg *config.Config, projectRoot string, opts Bui
 		reg:         reg,
 	}
 
-	base := filepath.Join(projectRoot, sourcesDir)
-	entries := sourceEntries(cfg, projectRoot, base, reg)
+	entries := sourceEntries(cfg, projectRoot, sourcesDir, reg)
 
 	done := make(chan struct{})
 

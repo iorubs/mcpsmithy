@@ -74,7 +74,7 @@ func TestReadFS(t *testing.T) {
 		wantErr   bool
 	}{
 		{"single glob", []string{"*.md"}, "", 2, false},
-		{"prefix set", []string{"*.md"}, "https://example.com", 2, false},
+		{"prefix set", []string{"*.md"}, "some/prefix", 2, false},
 		{"no match", []string{"*.yaml"}, "", 0, false},
 		{"multiple globs", []string{"*.md", "*.go"}, "", 3, false},
 	}

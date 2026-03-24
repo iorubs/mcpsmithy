@@ -13,13 +13,15 @@ import (
 	"github.com/operator-assistant/mcpsmithy/internal/config"
 )
 
+const sourceKindGit = "git"
+
 func init() {
-	DefaultRegistry.Register("git", func(name string, raw any, _, baseDir string, global config.PullPolicy) (Source, SourceMeta, error) {
+	DefaultRegistry.Register(sourceKindGit, func(name string, raw any, _, baseDir string, global config.PullPolicy) (Source, SourceMeta, error) {
 		src, ok := raw.(config.GitSource)
 		if !ok {
 			return nil, SourceMeta{}, fmt.Errorf("git source %q: unexpected config type %T", name, raw)
 		}
-		destDir := filepath.Join(baseDir, "git", name)
+		destDir := filepath.Join(baseDir, sourceKindGit, name)
 		return &GitSource{
 				repo:    src.Repo,
 				ref:     src.Ref,
@@ -29,7 +31,7 @@ func init() {
 			}, SourceMeta{
 				NoIndex:    src.Index != nil && !*src.Index,
 				ReadGlobs:  src.Paths,
-				ReadPrefix: src.Repo,
+				ReadPrefix: destDir,
 			}, nil
 	})
 }

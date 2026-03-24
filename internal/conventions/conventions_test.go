@@ -40,7 +40,9 @@ func TestBuildIndex(t *testing.T) {
 		"tooling":  {Scope: "internal/tools/**", Description: "Tool engine conventions"},
 	}
 
-	idx := BuildIndex(context.Background(), convs)
+	idx := BuildIndex(context.Background(), &config.Config{
+		Conventions: convs,
+	})
 	if idx.Len() != 4 {
 		t.Fatalf("expected 4 convention chunks, got %d", idx.Len())
 	}
