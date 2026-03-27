@@ -318,7 +318,6 @@ func TestNewHTTPConstructor(t *testing.T) {
 func TestHTTPNotifyBroadcastsToAllSessions(t *testing.T) {
 	hs, srv := testHTTPServer(t)
 
-	// Connect two SSE clients.
 	connectAndReadLines := func(t *testing.T) <-chan string {
 		t.Helper()
 		sseResp, err := http.Get(hs.URL + "/sse")
@@ -337,7 +336,6 @@ func TestHTTPNotifyBroadcastsToAllSessions(t *testing.T) {
 				}
 			}
 		}()
-		// Drain the endpoint event.
 		select {
 		case <-lines:
 		case <-time.After(2 * time.Second):
@@ -349,7 +347,6 @@ func TestHTTPNotifyBroadcastsToAllSessions(t *testing.T) {
 	linesA := connectAndReadLines(t)
 	linesB := connectAndReadLines(t)
 
-	// Trigger SwapEngine — should broadcast notification to both clients.
 	eng2 := newTestEngine(t)
 	srv.SwapEngine(eng2)
 
