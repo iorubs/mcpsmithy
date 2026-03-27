@@ -27,6 +27,23 @@ sources, pull them first and examine the fetched content before
 referencing it. Call `config_section` for each section when you are
 ready to write it.
 
+### Authentication
+
+All HTTP requests for sources and HTTP template functions read
+`~/.netrc` automatically. When login is `token` (or omitted), the
+password is sent as a Bearer token. Otherwise login and password are
+sent as Basic Auth.
+
+```
+machine bearer.example.com
+  login token
+  password <bearer-token>
+
+machine basic.example.com
+  login <username>
+  password <password>
+```
+
 ### Decision Rules
 
 - **Index or not?** Index docs and content the agent should search by

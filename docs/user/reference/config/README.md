@@ -37,6 +37,23 @@ sources, pull them first and examine the fetched content before
 referencing it. Call `config_section` for each section when you are
 ready to write it.
 
+### Authentication
+
+All HTTP requests for sources and HTTP template functions read
+`~/.netrc` automatically. When login is `token` (or omitted), the
+password is sent as a Bearer token. Otherwise login and password are
+sent as Basic Auth.
+
+```
+machine bearer.example.com
+  login token
+  password <bearer-token>
+
+machine basic.example.com
+  login <username>
+  password <password>
+```
+
 ### Decision Rules
 
 - **Index or not?** Index docs and content the agent should search by
@@ -161,16 +178,7 @@ separately.
 ### Git Authentication
 
 Git sources use your existing git credentials — SSH keys, credential
-helpers, or HTTPS via `~/.netrc`. Both GitHub and GitLab accept
-PAT-based Basic Auth over HTTPS:
-
-```
-machine github.com login <any> password <PAT>
-machine gitlab.com login <any> password <PAT>
-```
-
-Use SSH repo URLs (`git@github.com:org/repo.git`) when SSH auth is
-preferred.
+helpers, or HTTPS via `~/.netrc`.
 
 ### HTTP Source Authentication
 
@@ -536,10 +544,8 @@ them well.
 ### Templates
 
 Every tool requires a `template:` field — a Go `text/template`
-string. Templates can call built-in functions (`conventions_for`,
-`search_for`, `file_read`, `http_get`, `grep`) and access the
-project context via `{{ .mcpsmithy }}`. Params and options are
-accessible as `{{ .paramName }}`.
+string. Templates can call built-in functions and access the project context via `{{ .mcpsmithy }}`. Params and options are accessible as `{{ .paramName }}`.
+
 
 ### Let Descriptions Teach
 
@@ -579,6 +585,12 @@ This applies broadly — whenever the template expects a value in a
 different format than what the user naturally provides, encode that
 in the param name and description.
 
+Where possible, keep the full URL out of params entirely —
+hardcode the base URL in the template and let the agent supply only
+the variable parts (an ID, a project path, etc.). When the URL
+must come from a param, set the `urlAllowList` tool option to
+restrict which hosts the HTTP functions can reach.
+
 ### Encode Opinions, Not Syntax
 
 The AI knows `go test` and `npm run build`. What it doesn't know is
@@ -605,12 +617,17 @@ The AI can already read local files with its editor tools. Use
 `file_read` in templates only for content the AI cannot access
 directly — files outside the workspace or generated content.
 
+### HTTP Authentication
+
+`http_get`, `http_post`, and `http_put` authenticate automatically
+via `~/.netrc`. The password field is sent as a Bearer token.
+
 ### Tool Sets by Use Case
 
 - **Docs Assistant** — `get_convention`, `search`, `read_doc`
 - **Project Awareness** — `find_convention`, `search`
 - **Support & Troubleshooting** — `project_info`, `find_convention`, `search`, `ci_log`
-- **Agentic Application** — `search`, `find_convention`, `get_status`
+- **Agentic Application** — `search`, `find_convention`, `api_read`, `api_create`, `api_update`
 
 Full YAML examples for each deployment mode are below.
 

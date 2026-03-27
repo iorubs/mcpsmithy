@@ -37,16 +37,19 @@ itself in an unfamiliar codebase without reading every directory.
 **Conventions:** Map service paths to their runbooks so the agent
 knows what to read before investigating a given area.
 
-**CI logs (optional):** If your CI/CD system exposes an API, a `ci_log`
-tool using `http_get` lets the agent fetch logs for a given run or
-pipeline directly. Use `grep` in the template to filter the output down
-to relevant lines before it reaches the agent.
+**Live API reads (optional):** If your CI/CD system or any other
+service exposes an API, a tool using `http_get` lets the agent fetch
+data directly — CI logs for a given pipeline, Slack channel history
+for a support thread, or a status page summary. Use `grep` in the
+template to filter the output down to relevant lines before it reaches
+the agent.
 
 **Tools needed:**
 - `project_info` — repo layout and source descriptions
 - `find_convention` — returns the docs, convention rules, and workflows that apply to a file path
 - `search` — ranked search across all indexed sources; conventions are surfaced first so the agent gets the right context before digging into code
-- `ci_log` — fetches CI/CD logs for a given run or pipeline
+- `ci_log` — fetches CI/CD logs for a given run or pipeline via `http_get`
+- `slack_history` — fetches recent messages from a Slack channel via `http_get`; useful for reviewing support threads or incident chatter
 
 For full YAML examples of each source type, tool template, and convention pattern, see the [config reference](../../reference/config/README.md).
 

@@ -37,16 +37,7 @@ separately.
 ### Git Authentication
 
 Git sources use your existing git credentials — SSH keys, credential
-helpers, or HTTPS via `~/.netrc`. Both GitHub and GitLab accept
-PAT-based Basic Auth over HTTPS:
-
-```
-machine github.com login <any> password <PAT>
-machine gitlab.com login <any> password <PAT>
-```
-
-Use SSH repo URLs (`git@github.com:org/repo.git`) when SSH auth is
-preferred.
+helpers, or HTTPS via `~/.netrc`.
 
 ### HTTP Source Authentication
 

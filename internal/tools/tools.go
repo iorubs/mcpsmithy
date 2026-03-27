@@ -179,7 +179,7 @@ func zeroForType(t config.ParamType) any {
 }
 
 func (e *Engine) templateHandler(name string, t config.Tool) (handler, error) {
-	parsed, err := template.New(name).Funcs(e.tpl.funcMap()).Option("missingkey=error").Parse(string(t.Template))
+	parsed, err := template.New(name).Funcs(e.tpl.funcMap(t.Options)).Option("missingkey=error").Parse(string(t.Template))
 	if err != nil {
 		return nil, fmt.Errorf("parse error: %w", err)
 	}

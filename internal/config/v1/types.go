@@ -250,6 +250,9 @@ type Tool struct {
 	// Use options for values fixed per tool: token budgets, result limits, base URLs, feature flags.
 	// For example, wire maxResults from options (e.g. `{{ search_for .query .maxResults }}`)
 	// so the config author controls the budget, not the LLM.
+	//
+	// Reserved option: urlAllowList ([]string) — when set, http_get, http_post, and http_put
+	// reject any URL whose scheme://host is not in the list.
 	Options map[string]any `yaml:"options,omitempty"`
 	// When false params are not logged at DEBUG level. Default (nil/unset) logs params.
 	LogParams *bool `yaml:"log_params,omitempty"`
@@ -284,6 +287,8 @@ func (t Tool) Validate() error {
 		string(BuiltinFuncSearchFor):      func(string, ...any) string { return "" },
 		string(BuiltinFuncFileRead):       func(string, ...any) string { return "" },
 		string(BuiltinFuncHTTPGet):        func(string, ...any) (string, error) { return "", nil },
+		string(BuiltinFuncHTTPPost):       func(string, string, ...any) (string, error) { return "", nil },
+		string(BuiltinFuncHTTPPut):        func(string, string, ...any) (string, error) { return "", nil },
 		string(BuiltinFuncGrep):           func(string, float64, float64, string) string { return "" },
 	}).Option("missingkey=error").Parse(string(t.Template))
 	if err != nil {
@@ -367,8 +372,12 @@ const (
 	BuiltinFuncSearchFor BuiltinFunc = "search_for"
 	// func(path string, [maxFileSize int]) string — Reads local files matching a glob pattern within the project sandbox.
 	BuiltinFuncFileRead BuiltinFunc = "file_read"
-	// func(url string, [maxReadKB int]) (string, error) — HTTP GET with .netrc auth and ANSI stripping. Caps the response body at maxReadKB KB (default 10240).
+	// func(url string, [maxReadKB int]) (string, error) — HTTP GET with .netrc auth and ANSI stripping. Caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPGet BuiltinFunc = "http_get"
+	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error) — HTTP POST with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	BuiltinFuncHTTPPost BuiltinFunc = "http_post"
+	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error) — HTTP PUT with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	BuiltinFuncHTTPPut BuiltinFunc = "http_put"
 	// func(pattern string, before float64, after float64, input string) string — Filters input by regex pattern with context lines.
 	BuiltinFuncGrep BuiltinFunc = "grep"
 )

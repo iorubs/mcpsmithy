@@ -1,11 +1,16 @@
 package auth
 
 import (
+	"encoding/base64"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func base64Encode(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
 
 func TestApplyNetrcAuth(t *testing.T) {
 	// Write a temp .netrc so netrcLookup finds credentials without touching the
@@ -14,15 +19,35 @@ func TestApplyNetrcAuth(t *testing.T) {
 	t.Setenv("HOME", home)
 
 	netrcPath := filepath.Join(home, ".netrc")
-	if err := os.WriteFile(netrcPath, []byte("machine api.example.com login user password tok123\n"), 0600); err != nil {
+	netrc := "machine bearer.example.com login token password tok123\n" +
+		"machine basic.example.com login myuser password mypass\n" +
+		"machine bare.example.com password baretoken\n"
+	if err := os.WriteFile(netrcPath, []byte(netrc), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	t.Run("sets bearer token", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "https://api.example.com/v1/foo", nil)
+	t.Run("bearer when login is token", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "https://bearer.example.com/v1/foo", nil)
 		ApplyNetrcAuth(req)
 		if got := req.Header.Get("Authorization"); got != "Bearer tok123" {
 			t.Errorf("Authorization = %q, want %q", got, "Bearer tok123")
+		}
+	})
+
+	t.Run("basic when login is a username", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "https://basic.example.com/v1/foo", nil)
+		ApplyNetrcAuth(req)
+		want := "Basic " + base64Encode("myuser:mypass")
+		if got := req.Header.Get("Authorization"); got != want {
+			t.Errorf("Authorization = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("bearer when login is empty", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "https://bare.example.com/v1/foo", nil)
+		ApplyNetrcAuth(req)
+		if got := req.Header.Get("Authorization"); got != "Bearer baretoken" {
+			t.Errorf("Authorization = %q, want %q", got, "Bearer baretoken")
 		}
 	})
 

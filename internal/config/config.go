@@ -47,6 +47,8 @@ const (
 	BuiltinFuncSearchFor      = v1.BuiltinFuncSearchFor
 	BuiltinFuncFileRead       = v1.BuiltinFuncFileRead
 	BuiltinFuncHTTPGet        = v1.BuiltinFuncHTTPGet
+	BuiltinFuncHTTPPost       = v1.BuiltinFuncHTTPPost
+	BuiltinFuncHTTPPut        = v1.BuiltinFuncHTTPPut
 	BuiltinFuncGrep           = v1.BuiltinFuncGrep
 )
 

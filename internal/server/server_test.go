@@ -119,3 +119,25 @@ func TestMalformedJSONDoesNotTerminate(t *testing.T) {
 		t.Fatalf("expected ping result in output, got: %s", out)
 	}
 }
+
+func TestSwapEngineSendsToolsListChanged(t *testing.T) {
+	// After SwapEngine, the server should emit a tools/list_changed
+	// notification so connected clients re-fetch the tool list.
+	eng := newTestEngine(t)
+	reader := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}` + "\n")
+	var out bytes.Buffer
+	srv := New(eng, reader, &out)
+
+	// Serve processes the ping, then hits EOF.
+	_ = srv.Serve(context.Background())
+
+	// Now swap the engine — should write a notification to stdout.
+	out.Reset()
+	eng2 := newTestEngine(t)
+	srv.SwapEngine(eng2)
+
+	data := out.String()
+	if !strings.Contains(data, "notifications/tools/list_changed") {
+		t.Fatalf("expected tools/list_changed notification, got: %s", data)
+	}
+}
