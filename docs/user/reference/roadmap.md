@@ -29,16 +29,6 @@ MCPSmithy.
 
 ---
 
-### Action-capable tool type
-
-**Problem:** mcpsmithy only supports read-only operations. Teams that want AI agents to trigger actions — creating tickets, updating configuration, calling internal APIs — must build separate tooling or rely on the agent's own capabilities, which may lack access to internal systems or safe credential management.
-
-**Value:** Would make mcpsmithy a more complete operations platform for a project — not just context retrieval but also audited action execution. Reduces the need for separate agent skill tooling.
-
-**Why parked:** The boundary between what the MCP server should do vs what the agent should handle natively is genuinely unclear — agents already have HTTP and function-calling capabilities, so adding action execution here risks duplicating that layer without clear benefit. It also meaningfully expands the trust surface of the server, which currently has a clean read-only threat model. Needs a concrete use case and a security/capability design pass before it belongs on the active roadmap.
-
----
-
 ### Chunking improvements
 
 **Problem:** The current chunking strategies have two gaps. First, there is no upper bound on chunk size — a very large file becomes a single chunk that dilutes search scores. Second, the `section` strategy only works correctly for Markdown; code files have natural boundaries too, but there is no way to split them at the right granularity today.
@@ -46,16 +36,6 @@ MCPSmithy.
 **Value:** Bounded chunk sizes would prevent large files from dominating search results. Per-language chunking would improve search precision for code sources, returning the relevant function or declaration rather than the whole file.
 
 **Why parked:** For the token-bound problem, splitting at fixed token boundaries destroys semantic meaning — a coherent section or whole file is always a better unit for the current search approach. This tradeoff only shifts once embedding-based search is added, so token chunking should be implemented alongside that, not before. For per-language chunking, auto-detection is correct and safe at current scale — whole-file results with preview snippets are sufficient for navigation. Revisit when code search quality becomes a demonstrated pain point.
-
----
-
-### Per-tool sandbox scoping and multi-root workspaces
-
-**Problem:** All tools share the same sandbox root. There is no way to restrict an individual tool to a sub-directory — e.g. a `read_frontend` tool limited to `frontend/` and a `read_backend` tool restricted to `backend/`. Monorepo setups have a related question: whether to place a single config at the root (using glob patterns targeting sub-projects) or manage separate configs per sub-project.
-
-**Value:** Would allow a single server instance to serve monorepo setups with stricter per-tool access boundaries, simplifying configuration for teams that prefer one server over many.
-
-**Why parked:** Both concerns are already addressed by running separate MCP server instances — each with its config at the relevant sub-project root. This gives per-sub-project sandboxing today with no additional implementation. True per-tool scoping within a single server adds meaningful complexity and is premature before a concrete use case emerges that genuinely can't be served by separate instances.
 
 ---
 

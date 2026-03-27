@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/base64"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -9,12 +10,19 @@ import (
 )
 
 // ApplyNetrcAuth sets the Authorization header on req using .netrc credentials
-// for the request's hostname. Uses Bearer token auth, which is supported by
-// both GitHub and GitLab APIs with personal access tokens.
+// for the request's hostname. When login is "token" (or empty), the password
+// is sent as a Bearer token. Otherwise login and password are sent as Basic Auth.
 func ApplyNetrcAuth(req *http.Request) {
 	host := req.URL.Hostname()
-	if _, password, ok := netrcLookup(host); ok {
+	login, password, ok := netrcLookup(host)
+	if !ok {
+		return
+	}
+	if login == "" || login == "token" {
 		req.Header.Set("Authorization", "Bearer "+password)
+	} else {
+		creds := base64.StdEncoding.EncodeToString([]byte(login + ":" + password))
+		req.Header.Set("Authorization", "Basic "+creds)
 	}
 }
 

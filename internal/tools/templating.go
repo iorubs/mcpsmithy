@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"text/template"
@@ -16,6 +17,25 @@ import (
 	"github.com/operator-assistant/mcpsmithy/internal/conventions"
 	"github.com/operator-assistant/mcpsmithy/internal/search"
 )
+
+// defaultMaxReadKB is the default HTTP response body cap (10 MB) used by
+// http_get, http_post, and http_put when the caller does not supply a limit.
+const defaultMaxReadKB = 10 * 1024
+
+// ansiRe matches ANSI escape sequences (CSI sequences and OSC sequences).
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x1b]*\x1b\\`)
+
+// noRedirectClient is an HTTP client that never follows redirects.
+// Redirects are treated as errors so callers get an explicit failure with
+// the redirect destination rather than silently receiving content from a
+// different URL (e.g. an SSO login page).
+// If redirect-following becomes necessary in the future, this can be
+// extended (e.g. opt-in via a third argument to http_get).
+var noRedirectClient = &http.Client{
+	CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
 
 // templateEngine provides template rendering with project-aware functions.
 type templateEngine struct {
@@ -108,37 +128,129 @@ func (e *templateEngine) Context(params map[string]any) map[string]any {
 	return ctx
 }
 
+// parseURLAllowList extracts the urlAllowList option from tool options
+// and returns a set of allowed "scheme://host" strings. Returns nil
+// when the option is absent (meaning all URLs are allowed).
+func parseURLAllowList(opts map[string]any) map[string]bool {
+	raw, ok := opts["urlAllowList"]
+	if !ok {
+		return nil
+	}
+	list, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	allowed := make(map[string]bool, len(list))
+	for _, v := range list {
+		s, ok := v.(string)
+		if !ok || s == "" {
+			continue
+		}
+		u, err := url.Parse(s)
+		if err != nil || u.Host == "" {
+			continue
+		}
+		allowed[strings.ToLower(u.Scheme)+"://"+strings.ToLower(u.Host)] = true
+	}
+	if len(allowed) == 0 {
+		return nil
+	}
+	return allowed
+}
+
+// urlAllowedByList checks whether rawURL's scheme+host is present in the
+// allowlist. Returns true when the list is nil (no restrictions).
+func urlAllowedByList(rawURL string, allowed map[string]bool) error {
+	if allowed == nil {
+		return nil
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL %q: %w", rawURL, err)
+	}
+	key := strings.ToLower(u.Scheme) + "://" + strings.ToLower(u.Host)
+	if !allowed[key] {
+		return fmt.Errorf("URL %q is not in the allowed list", rawURL)
+	}
+	return nil
+}
+
 // funcMap returns the template function map wired to conventions and search.
-func (e *templateEngine) funcMap() template.FuncMap {
+// opts are the tool-level options from which urlAllowList is extracted.
+func (e *templateEngine) funcMap(opts map[string]any) template.FuncMap {
+	allowedURLs := parseURLAllowList(opts)
 	return template.FuncMap{
 		string(config.BuiltinFuncConventionsFor): func(path string) []config.Convention {
 			return conventions.ForPath(e.conventions, path)
 		},
 		string(config.BuiltinFuncSearchFor): func(query string, opts ...any) string {
-			var maxResults, maxResultSize any
-			maxResults = 10
-			maxResultSize = 200
+			maxResults := 10
+			maxResultSize := 200
 			if len(opts) > 0 {
-				maxResults = opts[0]
+				if n, ok := opts[0].(int); ok {
+					maxResults = n
+				} else if f, ok := opts[0].(float64); ok {
+					maxResults = int(f)
+				}
 			}
 			if len(opts) > 1 {
-				maxResultSize = opts[1]
+				if n, ok := opts[1].(int); ok {
+					maxResultSize = n
+				} else if f, ok := opts[1].(float64); ok {
+					maxResultSize = int(f)
+				}
 			}
 			return e.searchFor(query, maxResults, maxResultSize)
 		},
 		string(config.BuiltinFuncFileRead): func(pathGlob string, maxFileSize ...any) string {
+			limit := 50
 			if len(maxFileSize) > 0 {
-				return e.fileRead(pathGlob, maxFileSize[0])
+				if n, ok := maxFileSize[0].(int); ok {
+					limit = n
+				} else if f, ok := maxFileSize[0].(float64); ok {
+					limit = int(f)
+				}
 			}
-			return e.fileRead(pathGlob, 50)
+			return e.fileRead(pathGlob, limit)
 		},
-		string(config.BuiltinFuncHTTPGet): func(url string, maxReadKB ...any) (string, error) {
-			const defaultMaxReadKB = 10 * 1024 // 10 MB
-			var arg any = defaultMaxReadKB
-			if len(maxReadKB) > 0 {
-				arg = maxReadKB[0]
+		string(config.BuiltinFuncHTTPGet): func(rawURL string, args ...any) (string, error) {
+			limit := defaultMaxReadKB
+			if len(args) > 0 {
+				if n, ok := args[0].(int); ok {
+					limit = n
+				}
 			}
-			return httpFetch(context.Background(), url, int64(toInt(arg, defaultMaxReadKB))*1024)
+			return httpFetch(context.Background(), rawURL, int64(limit)*1024, allowedURLs)
+		},
+		string(config.BuiltinFuncHTTPPost): func(rawURL string, body string, args ...any) (string, error) {
+			contentType := "application/json"
+			limit := defaultMaxReadKB
+			if len(args) > 0 {
+				if s, ok := args[0].(string); ok && s != "" {
+					contentType = s
+				}
+			}
+			if len(args) > 1 {
+				if n, ok := args[1].(int); ok {
+					limit = n
+				}
+			}
+			return httpSend(context.Background(), http.MethodPost, rawURL, body, contentType, int64(limit)*1024, allowedURLs)
+		},
+		string(config.BuiltinFuncHTTPPut): func(rawURL string, body string, args ...any) (string, error) {
+			contentType := "application/json"
+			limit := defaultMaxReadKB
+			if len(args) > 0 {
+				if s, ok := args[0].(string); ok && s != "" {
+					contentType = s
+				}
+			}
+			if len(args) > 1 {
+				if n, ok := args[1].(int); ok {
+					limit = n
+				}
+			}
+			return httpSend(context.Background(), http.MethodPut, rawURL, body, contentType, int64(limit)*1024, allowedURLs)
 		},
 		string(config.BuiltinFuncGrep): func(pattern string, before, after float64, input string) string {
 			return grepFunc(pattern, before, after, input)
@@ -153,7 +265,7 @@ func (e *templateEngine) funcMap() template.FuncMap {
 // maxResults controls how many results are returned per search.
 // maxResultSize controls the preview character limit for source doc results.
 // Both are set via tool options by the config author.
-func (e *templateEngine) searchFor(query string, maxResults, maxResultSize any) string {
+func (e *templateEngine) searchFor(query string, maxResults, maxResultSize int) string {
 	hasConvIdx := e.convIdx != nil && e.convIdx.Len() > 0
 	hasSourceIdx := e.idx != nil && e.idx.Len() > 0
 
@@ -161,8 +273,8 @@ func (e *templateEngine) searchFor(query string, maxResults, maxResultSize any) 
 		return "No search index available."
 	}
 
-	n := toInt(maxResults, 10)
-	previewSize := toInt(maxResultSize, 200)
+	n := maxResults
+	previewSize := maxResultSize
 
 	var sb strings.Builder
 	wrote := false
@@ -255,11 +367,10 @@ func (e *templateEngine) searchFor(query string, maxResults, maxResultSize any) 
 // concatenated contents with headers.
 //
 // maxFileSizeArg is set via tool options by the config author (KB).
-func (e *templateEngine) fileRead(pathGlob string, maxFileSizeArg any) string {
+func (e *templateEngine) fileRead(pathGlob string, maxKB int) string {
 	if e.fsys == nil {
 		return "file_read: no filesystem available"
 	}
-	maxKB := toInt(maxFileSizeArg, 50)
 	maxSize := int64(maxKB) * 1024
 
 	var all []string
@@ -300,26 +411,16 @@ func (e *templateEngine) fileRead(pathGlob string, maxFileSizeArg any) string {
 	return b.String()
 }
 
-// ansiRe matches ANSI escape sequences (CSI sequences and OSC sequences).
-var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x1b]*\x1b\\`)
-
-// noRedirectClient is an HTTP client that never follows redirects.
-// Redirects are treated as errors so callers get an explicit failure with
-// the redirect destination rather than silently receiving content from a
-// different URL (e.g. an SSO login page).
-// If redirect-following becomes necessary in the future, this can be
-// extended (e.g. opt-in via a third argument to http_get).
-var noRedirectClient = &http.Client{
-	CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-		return http.ErrUseLastResponse
-	},
-}
-
 // httpFetch performs an authenticated HTTP GET, strips ANSI codes, and
 // returns the body as a string. Applies .netrc credentials automatically.
 // Redirects are never followed — a 3xx response is returned as an error
 // that includes the redirect destination from the Location header.
-func httpFetch(ctx context.Context, rawURL string, maxRead int64) (string, error) {
+// When allowedHosts is non-nil the request URL must match one of the
+// entries; otherwise the call is rejected before any network I/O.
+func httpFetch(ctx context.Context, rawURL string, maxRead int64, allowedHosts map[string]bool) (string, error) {
+	if err := urlAllowedByList(rawURL, allowedHosts); err != nil {
+		return "", err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("creating request: %w", err)
@@ -347,6 +448,43 @@ func httpFetch(ctx context.Context, rawURL string, maxRead int64) (string, error
 	return ansiRe.ReplaceAllString(string(data), ""), nil
 }
 
+// httpSend performs an authenticated HTTP POST or PUT, strips ANSI codes,
+// and returns the body as a string. Applies .netrc credentials automatically.
+// Any 2xx response is treated as success. Redirects are never followed.
+// When allowedHosts is non-nil the request URL must match one of the
+// entries; otherwise the call is rejected before any network I/O.
+func httpSend(ctx context.Context, method, rawURL, body, contentType string, maxRead int64, allowedHosts map[string]bool) (string, error) {
+	if err := urlAllowedByList(rawURL, allowedHosts); err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, strings.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+	auth.ApplyNetrcAuth(req)
+	resp, err := noRedirectClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("%s %s: %w", method, rawURL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		if location != "" {
+			return "", fmt.Errorf("%s redirected to %s (%s) — update the URL", rawURL, location, resp.Status)
+		}
+		return "", fmt.Errorf("%s returned %s", rawURL, resp.Status)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("%s returned %s", rawURL, resp.Status)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxRead))
+	if err != nil {
+		return "", fmt.Errorf("reading response: %w", err)
+	}
+	return ansiRe.ReplaceAllString(string(data), ""), nil
+}
+
 // grepFunc implements the grep template function.
 // It performs a regex match with context lines on the input string.
 // Falls back to literal match when the pattern is not valid regex.
@@ -356,7 +494,6 @@ func grepFunc(pattern string, before, after float64, input string) string {
 	}
 	re, err := regexp.Compile("(?i)" + pattern)
 	if err != nil {
-		// Fall back to literal match if the pattern is not valid regex.
 		re = regexp.MustCompile(regexp.QuoteMeta(pattern))
 	}
 	b, a := int(before), int(after)
@@ -369,7 +506,6 @@ func grepFunc(pattern string, before, after float64, input string) string {
 
 	lines := strings.Split(input, "\n")
 
-	// Find all matching line indices.
 	var matches []int
 	for i, line := range lines {
 		if re.MatchString(line) {
@@ -380,7 +516,6 @@ func grepFunc(pattern string, before, after float64, input string) string {
 		return fmt.Sprintf("No lines matching %q found (%d lines searched).", pattern, len(lines))
 	}
 
-	// Build ranges [start, end) for each match with context, then merge overlaps.
 	type span struct{ start, end int }
 	spans := make([]span, 0, len(matches))
 	for _, m := range matches {
@@ -389,7 +524,6 @@ func grepFunc(pattern string, before, after float64, input string) string {
 		spans = append(spans, span{start, end})
 	}
 
-	// Merge overlapping/adjacent spans.
 	merged := []span{spans[0]}
 	for _, sp := range spans[1:] {
 		last := &merged[len(merged)-1]
@@ -414,21 +548,4 @@ func grepFunc(pattern string, before, after float64, input string) string {
 		}
 	}
 	return sb.String()
-}
-
-// toInt converts a value to int, handling string, float64, and int types
-// that may come from JSON-decoded params or string defaults.
-func toInt(v any, fallback int) int {
-	switch val := v.(type) {
-	case int:
-		return val
-	case float64:
-		return int(val)
-	case string:
-		var n int
-		if _, err := fmt.Sscanf(val, "%d", &n); err == nil {
-			return n
-		}
-	}
-	return fallback
 }

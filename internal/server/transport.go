@@ -20,8 +20,10 @@ const maxBufferSize = 4 * 1024 * 1024 // 4 MB
 // Transport is the interface implemented by both the stdio and HTTP transports.
 // Serve runs until the context is cancelled or the underlying connection closes,
 // calling handle for every incoming request and routing responses back to the client.
+// Notify sends a server-initiated JSON-RPC notification to all connected clients.
 type Transport interface {
 	Serve(ctx context.Context, handle func(context.Context, *request) *response) error
+	Notify(method string) error
 }
 
 // stdio handles newline-delimited JSON-RPC over stdin/stdout.
@@ -119,6 +121,16 @@ func (t *stdio) writeResponse(ctx context.Context, resp *response) error {
 	return t.encoder.Encode(resp)
 }
 
+// Notify sends a server-initiated JSON-RPC notification to stdout.
+func (t *stdio) Notify(method string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.encoder.Encode(map[string]string{
+		"jsonrpc": jsonrpcVersion,
+		"method":  method,
+	})
+}
+
 // httpTransport implements MCP's SSE-based streaming transport:
 //   - GET  /sse     — long-lived SSE stream; server pushes JSON-RPC responses here
 //   - POST /message — client sends JSON-RPC requests here; server replies 202 Accepted
@@ -128,7 +140,7 @@ func (t *stdio) writeResponse(ctx context.Context, resp *response) error {
 // SSE stream. This allows multiple clients to connect concurrently.
 type httpTransport struct {
 	addr     string
-	sessions map[string]chan *response
+	sessions map[string]chan []byte
 	mu       sync.Mutex
 }
 
@@ -136,7 +148,7 @@ type httpTransport struct {
 func newHTTP(addr string) *httpTransport {
 	return &httpTransport{
 		addr:     addr,
-		sessions: make(map[string]chan *response),
+		sessions: make(map[string]chan []byte),
 	}
 }
 
@@ -187,7 +199,7 @@ func (t *httpTransport) sseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sid := newSessionID()
-	ch := make(chan *response, 16)
+	ch := make(chan []byte, 16)
 
 	t.mu.Lock()
 	t.sessions[sid] = ch
@@ -212,12 +224,8 @@ func (t *httpTransport) sseHandler(w http.ResponseWriter, r *http.Request) {
 	slog.DebugContext(r.Context(), "SSE client connected", "session", sid)
 	for {
 		select {
-		case resp := <-ch:
-			data, err := json.Marshal(resp)
-			if err != nil {
-				continue
-			}
-			slog.DebugContext(r.Context(), "send", "id", string(resp.ID), "session", sid)
+		case data := <-ch:
+			slog.DebugContext(r.Context(), "send", "session", sid)
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		case <-r.Context().Done():
@@ -262,10 +270,37 @@ func (t *httpTransport) messageHandler(w http.ResponseWriter, r *http.Request, h
 	w.WriteHeader(http.StatusAccepted)
 
 	if resp := handle(r.Context(), &req); resp != nil {
+		data, err := json.Marshal(resp)
+		if err != nil {
+			slog.WarnContext(r.Context(), "failed to marshal response", "session", sid, "error", err)
+			return
+		}
 		select {
-		case ch <- resp:
+		case ch <- data:
 		default:
 			slog.WarnContext(r.Context(), "session channel full, dropping response", "session", sid, "id", string(resp.ID))
 		}
 	}
+}
+
+// Notify broadcasts a server-initiated JSON-RPC notification to all SSE sessions.
+func (t *httpTransport) Notify(method string) error {
+	data, err := json.Marshal(map[string]string{
+		"jsonrpc": jsonrpcVersion,
+		"method":  method,
+	})
+	if err != nil {
+		return err
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for sid, ch := range t.sessions {
+		select {
+		case ch <- data:
+		default:
+			slog.Warn("notify: session channel full, skipping", "session", sid)
+		}
+	}
+	return nil
 }

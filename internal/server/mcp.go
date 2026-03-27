@@ -18,6 +18,9 @@ const (
 	methodToolsCall              = "tools/call"
 	methodPing                   = "ping"
 	methodNotificationsCancelled = "notifications/cancelled"
+
+	// Server-initiated notifications.
+	methodToolsListChanged = "notifications/tools/list_changed"
 )
 
 // initializeParams is sent by the client in the "initialize" request.

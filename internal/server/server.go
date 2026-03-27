@@ -38,11 +38,16 @@ func NewHTTP(eng Engine, addr string) *Server {
 	return &Server{engine: eng, tp: newHTTP(addr)}
 }
 
-// SwapEngine atomically replaces the running engine.
+// SwapEngine atomically replaces the running engine and notifies
+// connected clients that the tool list has changed.
 func (s *Server) SwapEngine(eng Engine) {
 	s.mu.Lock()
 	s.engine = eng
 	s.mu.Unlock()
+
+	if err := s.tp.Notify(methodToolsListChanged); err != nil {
+		slog.Warn("failed to send tools/list_changed notification", "error", err)
+	}
 }
 
 // Serve starts the transport loop until the context is cancelled or the

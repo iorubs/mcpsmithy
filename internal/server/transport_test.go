@@ -314,3 +314,53 @@ func TestNewHTTPConstructor(t *testing.T) {
 		t.Fatalf("expected *httpTransport, got %T", srv.tp)
 	}
 }
+
+func TestHTTPNotifyBroadcastsToAllSessions(t *testing.T) {
+	hs, srv := testHTTPServer(t)
+
+	// Connect two SSE clients.
+	connectAndReadLines := func(t *testing.T) <-chan string {
+		t.Helper()
+		sseResp, err := http.Get(hs.URL + "/sse")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { sseResp.Body.Close() })
+
+		lines := make(chan string, 32)
+		go func() {
+			scanner := bufio.NewScanner(sseResp.Body)
+			for scanner.Scan() {
+				line := scanner.Text()
+				if after, ok := strings.CutPrefix(line, "data: "); ok {
+					lines <- after
+				}
+			}
+		}()
+		// Drain the endpoint event.
+		select {
+		case <-lines:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for endpoint event")
+		}
+		return lines
+	}
+
+	linesA := connectAndReadLines(t)
+	linesB := connectAndReadLines(t)
+
+	// Trigger SwapEngine — should broadcast notification to both clients.
+	eng2 := newTestEngine(t)
+	srv.SwapEngine(eng2)
+
+	for name, ch := range map[string]<-chan string{"A": linesA, "B": linesB} {
+		select {
+		case data := <-ch:
+			if !strings.Contains(data, "notifications/tools/list_changed") {
+				t.Fatalf("client %s: expected tools/list_changed, got: %s", name, data)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("client %s: timeout waiting for notification", name)
+		}
+	}
+}
