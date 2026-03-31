@@ -192,6 +192,11 @@ func (t *httpTransport) Serve(ctx context.Context, handle func(context.Context, 
 // per-session channel. Each connection gets a unique session ID embedded in the
 // endpoint URL so POST /message can route responses back to the correct stream.
 func (t *httpTransport) sseHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming not supported", http.StatusInternalServerError)
@@ -238,7 +243,6 @@ func (t *httpTransport) sseHandler(w http.ResponseWriter, r *http.Request) {
 // messageHandler receives a JSON-RPC request, dispatches it, and enqueues the
 // response on the session's channel identified by the session_id query parameter.
 func (t *httpTransport) messageHandler(w http.ResponseWriter, r *http.Request, handle func(context.Context, *request) *response) {
-	// Handle CORS preflight for browser-based clients.
 	if r.Method == http.MethodOptions {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")

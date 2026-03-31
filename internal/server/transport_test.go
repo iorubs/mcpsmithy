@@ -20,6 +20,42 @@ func testHTTPServer(t *testing.T) (*httptest.Server, *Server) {
 	return hs, srv
 }
 
+// connectSSE opens a GET /sse stream, waits for the endpoint event, and returns
+// the message URL and a channel of subsequent data lines.
+func connectSSE(t *testing.T, baseURL string) (messageURL string, lines <-chan string) {
+	t.Helper()
+	sseResp, err := http.Get(baseURL + "/sse")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { sseResp.Body.Close() })
+
+	ch := make(chan string, 32)
+	ready := make(chan string, 1)
+	go func() {
+		scanner := bufio.NewScanner(sseResp.Body)
+		var notified bool
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !notified && strings.HasPrefix(line, "data: /message") {
+				ready <- strings.TrimPrefix(line, "data: ")
+				notified = true
+				continue
+			}
+			if after, ok := strings.CutPrefix(line, "data: "); ok {
+				ch <- after
+			}
+		}
+	}()
+
+	select {
+	case messageURL = <-ready:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for SSE endpoint event")
+	}
+	return messageURL, ch
+}
+
 func TestHTTPSSEEndpointEvent(t *testing.T) {
 	hs, _ := testHTTPServer(t)
 
@@ -33,7 +69,6 @@ func TestHTTPSSEEndpointEvent(t *testing.T) {
 		t.Fatalf("expected text/event-stream, got %q", ct)
 	}
 
-	// Read the initial endpoint event — should contain a session_id query param.
 	scanner := bufio.NewScanner(resp.Body)
 	var endpointURL string
 	done := make(chan struct{})
@@ -60,55 +95,42 @@ func TestHTTPSSEEndpointEvent(t *testing.T) {
 	}
 }
 
-func TestHTTPMessageMethodNotAllowed(t *testing.T) {
+func TestHTTPMethodNotAllowed(t *testing.T) {
 	hs, _ := testHTTPServer(t)
 
-	resp, err := http.Get(hs.URL + "/message")
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name   string
+		method string
+		path   string
+	}{
+		{"POST /sse", http.MethodPost, "/sse"},
+		{"PUT /sse", http.MethodPut, "/sse"},
+		{"GET /message", http.MethodGet, "/message"},
+		{"PUT /message", http.MethodPut, "/message"},
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405, got %d", resp.StatusCode)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, hs.URL+tt.path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusMethodNotAllowed {
+				t.Fatalf("expected 405, got %d", resp.StatusCode)
+			}
+		})
 	}
 }
 
 func TestHTTPFullRoundTrip(t *testing.T) {
 	hs, _ := testHTTPServer(t)
 
-	// Open SSE stream first so responses have somewhere to go.
-	sseResp, err := http.Get(hs.URL + "/sse")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sseResp.Body.Close()
-
-	// Drain the initial endpoint event and extract the POST URL.
-	scanner := bufio.NewScanner(sseResp.Body)
-	endpointReady := make(chan string, 1)
-	sseLines := make(chan string, 32)
-	go func() {
-		var notified bool
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "data: /message") && !notified {
-				endpointReady <- strings.TrimPrefix(line, "data: ")
-				notified = true
-				continue
-			}
-			if after, ok := strings.CutPrefix(line, "data: "); ok {
-				sseLines <- after
-			}
-		}
-	}()
-
-	var messageURL string
-	select {
-	case messageURL = <-endpointReady:
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for endpoint event")
-	}
+	messageURL, sseLines := connectSSE(t, hs.URL)
 
 	postJSON := func(t *testing.T, body string) {
 		t.Helper()
@@ -166,109 +188,55 @@ func TestHTTPFullRoundTrip(t *testing.T) {
 	}
 }
 
-func TestHTTPBadRequestBody(t *testing.T) {
+func TestHTTPPostMessageErrors(t *testing.T) {
 	hs, _ := testHTTPServer(t)
 
-	// Must connect SSE first to get a valid session_id.
-	sseResp, err := http.Get(hs.URL + "/sse")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sseResp.Body.Close()
+	validMessageURL, _ := connectSSE(t, hs.URL)
 
-	scanner := bufio.NewScanner(sseResp.Body)
-	sidCh := make(chan string, 1)
-	go func() {
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "data: /message?session_id=") {
-				sidCh <- strings.TrimPrefix(line, "data: ")
-				return
+	tests := []struct {
+		name     string
+		url      string
+		body     string
+		wantCode int
+	}{
+		{
+			name:     "unknown session",
+			url:      "/message?session_id=bogus",
+			body:     `{"jsonrpc":"2.0","id":1,"method":"ping"}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "bad request body",
+			url:      validMessageURL,
+			body:     "not json",
+			wantCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := http.Post(hs.URL+tt.url, "application/json", bytes.NewBufferString(tt.body))
+			if err != nil {
+				t.Fatal(err)
 			}
-		}
-	}()
-
-	var messageURL string
-	select {
-	case messageURL = <-sidCh:
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for endpoint")
-	}
-
-	resp, err := http.Post(hs.URL+messageURL, "application/json", bytes.NewBufferString("not json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400 Bad request, got %d", resp.StatusCode)
-	}
-}
-
-func TestHTTPUnknownSession(t *testing.T) {
-	hs, _ := testHTTPServer(t)
-
-	// POST with a bogus session_id should return 400.
-	resp, err := http.Post(hs.URL+"/message?session_id=bogus", "application/json",
-		bytes.NewBufferString(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400 for unknown session, got %d", resp.StatusCode)
+			resp.Body.Close()
+			if resp.StatusCode != tt.wantCode {
+				t.Fatalf("expected %d, got %d", tt.wantCode, resp.StatusCode)
+			}
+		})
 	}
 }
 
 func TestHTTPMultiClientIsolation(t *testing.T) {
 	hs, _ := testHTTPServer(t)
 
-	// Helper: connect an SSE stream and return (messageURL, sseLinesChan).
-	connectClient := func(t *testing.T) (string, <-chan string) {
-		t.Helper()
-		sseResp, err := http.Get(hs.URL + "/sse")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { sseResp.Body.Close() })
-
-		scanner := bufio.NewScanner(sseResp.Body)
-		endpointCh := make(chan string, 1)
-		lines := make(chan string, 32)
-		go func() {
-			var notified bool
-			for scanner.Scan() {
-				line := scanner.Text()
-				if strings.HasPrefix(line, "data: /message") && !notified {
-					endpointCh <- strings.TrimPrefix(line, "data: ")
-					notified = true
-					continue
-				}
-				if after, ok := strings.CutPrefix(line, "data: "); ok {
-					lines <- after
-				}
-			}
-		}()
-
-		var msgURL string
-		select {
-		case msgURL = <-endpointCh:
-		case <-time.After(2 * time.Second):
-			t.Fatal("timeout waiting for endpoint")
-		}
-		return msgURL, lines
-	}
-
-	urlA, linesA := connectClient(t)
-	urlB, linesB := connectClient(t)
+	urlA, linesA := connectSSE(t, hs.URL)
+	urlB, linesB := connectSSE(t, hs.URL)
 
 	if urlA == urlB {
 		t.Fatal("both clients got the same message URL")
 	}
 
-	// Send a request through client A.
 	resp, err := http.Post(hs.URL+urlA, "application/json",
 		bytes.NewBufferString(`{"jsonrpc":"2.0","id":10,"method":"ping"}`))
 	if err != nil {
@@ -276,7 +244,6 @@ func TestHTTPMultiClientIsolation(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	// Client A should receive the response.
 	select {
 	case data := <-linesA:
 		if !strings.Contains(data, `"id":10`) && !strings.Contains(data, `"id": 10`) {
@@ -286,7 +253,6 @@ func TestHTTPMultiClientIsolation(t *testing.T) {
 		t.Fatal("client A did not receive response")
 	}
 
-	// Client B should NOT receive anything.
 	select {
 	case data := <-linesB:
 		t.Fatalf("client B received response meant for A: %s", data)
@@ -318,34 +284,8 @@ func TestNewHTTPConstructor(t *testing.T) {
 func TestHTTPNotifyBroadcastsToAllSessions(t *testing.T) {
 	hs, srv := testHTTPServer(t)
 
-	connectAndReadLines := func(t *testing.T) <-chan string {
-		t.Helper()
-		sseResp, err := http.Get(hs.URL + "/sse")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { sseResp.Body.Close() })
-
-		lines := make(chan string, 32)
-		go func() {
-			scanner := bufio.NewScanner(sseResp.Body)
-			for scanner.Scan() {
-				line := scanner.Text()
-				if after, ok := strings.CutPrefix(line, "data: "); ok {
-					lines <- after
-				}
-			}
-		}()
-		select {
-		case <-lines:
-		case <-time.After(2 * time.Second):
-			t.Fatal("timeout waiting for endpoint event")
-		}
-		return lines
-	}
-
-	linesA := connectAndReadLines(t)
-	linesB := connectAndReadLines(t)
+	_, linesA := connectSSE(t, hs.URL)
+	_, linesB := connectSSE(t, hs.URL)
 
 	eng2 := newTestEngine(t)
 	srv.SwapEngine(eng2)
