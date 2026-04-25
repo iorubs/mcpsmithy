@@ -26,7 +26,12 @@ func main() {
 		kong.Name("mcpsmithy"),
 		kong.Description("Project-agnostic MCP tool server. Reads .mcpsmithy.yaml and serves MCP tools over stdio."),
 		kong.UsageOnError(),
+		kong.HelpOptions{Compact: true, NoExpandSubcommands: true},
 		kong.BindTo(ctx, (*context.Context)(nil)),
+		kong.Vars{
+			"log_default": string(cmd.LogLevelInfo),
+			"log_enum":    cmd.LogEnum,
+		},
 	)
 
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{

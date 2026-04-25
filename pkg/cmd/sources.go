@@ -14,16 +14,18 @@ type SourcesCmd struct {
 }
 
 // SourcesPullCmd fetches all sources and writes them to disk.
-type SourcesPullCmd struct{}
+type SourcesPullCmd struct {
+	ConfigFlag
+}
 
 // Run executes sources pull.
-func (cmd *SourcesPullCmd) Run(ctx context.Context, cli *CLI) error {
-	cfg, root, err := api.LoadConfig(cli.Config)
+func (cmd *SourcesPullCmd) Run(ctx context.Context) error {
+	cfg, root, err := api.LoadConfig(cmd.Config)
 	if err != nil {
 		return err
 	}
 
-	slog.InfoContext(ctx, "pull starting", "config", cli.Config, "root", root)
+	slog.InfoContext(ctx, "pull starting", "config", cmd.Config, "root", root)
 
 	project.Build(ctx, cfg, root, project.BuildOptions{SkipIndex: true})
 

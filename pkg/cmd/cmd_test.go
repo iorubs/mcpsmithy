@@ -31,8 +31,7 @@ func TestProjectRoot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cli := &CLI{Commands: Commands{Config: tt.config}}
-			root, err := cli.ProjectRoot()
+			root, err := ProjectRoot(tt.config)
 
 			if tt.wantErr {
 				if err == nil {

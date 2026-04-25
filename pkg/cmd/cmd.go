@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // LogLevel represents a supported log verbosity level.
@@ -18,31 +19,41 @@ const (
 	LogLevelError LogLevel = "error"
 )
 
+var LogEnum = strings.Join([]string{
+	string(LogLevelDebug),
+	string(LogLevelInfo),
+	string(LogLevelWarn),
+	string(LogLevelError),
+}, ",")
+
 // CLI is the root Kong CLI struct.
 type CLI struct {
-	LogLevel LogLevel `help:"Log level." default:"info" enum:"debug,info,warn,error" short:"l"`
+	LogLevel LogLevel `help:"Log level (one of: ${log_enum})." default:"${log_default}" enum:"${log_enum}" short:"l"`
 	Commands
 }
 
 // Commands holds the subcommands and config, safe to embed.
 type Commands struct {
-	Config   string      `help:"Path to config file." default:".mcpsmithy.yaml" type:"path" short:"c"`
-	Serve    ServeCmd    `cmd:"" help:"Start the MCP server."`
+	Serve    ServeCmd    `cmd:"" help:"Run MCP server."`
 	Validate ValidateCmd `cmd:"" help:"Validate config file."`
 	Sources  SourcesCmd  `cmd:"" help:"Manage sources."`
-	Setup    SetupCmd    `cmd:"" help:"Start the config-authoring assistant (no config required)."`
+	Setup    SetupCmd    `cmd:"" help:"Start config-authoring MCP server assistant."`
+}
+
+type ConfigFlag struct {
+	Config string `help:"Path to config." default:".mcpsmithy.yaml" type:"path" short:"c"`
 }
 
 // ProjectRoot resolves the project root from the config file location.
 // The root is always the directory containing the config file.
-func (cli *CLI) ProjectRoot() (string, error) {
-	if cli.Config != "" {
-		info, err := os.Stat(cli.Config)
+func ProjectRoot(path string) (string, error) {
+	if path != "" {
+		info, err := os.Stat(path)
 		if err == nil {
 			if info.IsDir() {
-				return "", fmt.Errorf("config path %q is a directory, not a file", cli.Config)
+				return "", fmt.Errorf("config path %q is a directory, not a file", path)
 			}
-			return filepath.Abs(filepath.Dir(cli.Config))
+			return filepath.Abs(filepath.Dir(path))
 		}
 	}
 	return filepath.Abs(".")

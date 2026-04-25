@@ -14,14 +14,15 @@ import (
 
 // ServeCmd starts the MCP server.
 type ServeCmd struct {
+	ConfigFlag
 	Transport string `help:"Transport to use." default:"stdio" enum:"stdio,http"`
 	Addr      string `help:"Listen address (HTTP transport only)." default:":8080"`
 	Watch     bool   `help:"Watch config file and hot-reload on change." default:"false"`
 }
 
 // Run executes the serve command.
-func (cmd *ServeCmd) Run(ctx context.Context, cli *CLI) error {
-	cfg, root, err := api.LoadConfig(cli.Config)
+func (cmd *ServeCmd) Run(ctx context.Context) error {
+	cfg, root, err := api.LoadConfig(cmd.Config)
 	if err != nil {
 		return err
 	}
@@ -45,7 +46,7 @@ func (cmd *ServeCmd) Run(ctx context.Context, cli *CLI) error {
 			srv = server.New(eng)
 		}
 
-		go watchConfig(ctx, cli.Config, srv)
+		go watchConfig(ctx, cmd.Config, srv)
 		slog.InfoContext(ctx, "ready", "project", cfg.Project.Name, "root", root, "tools", len(cfg.Tools))
 
 		return srv.Serve(ctx)
