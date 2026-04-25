@@ -28,10 +28,6 @@ func main() {
 		kong.UsageOnError(),
 		kong.HelpOptions{Compact: true, NoExpandSubcommands: true},
 		kong.BindTo(ctx, (*context.Context)(nil)),
-		kong.Vars{
-			"log_default": string(cmd.LogLevelInfo),
-			"log_enum":    cmd.LogEnum,
-		},
 	)
 
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{

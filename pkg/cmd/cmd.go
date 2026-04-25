@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // LogLevel represents a supported log verbosity level.
@@ -19,16 +18,9 @@ const (
 	LogLevelError LogLevel = "error"
 )
 
-var LogEnum = strings.Join([]string{
-	string(LogLevelDebug),
-	string(LogLevelInfo),
-	string(LogLevelWarn),
-	string(LogLevelError),
-}, ",")
-
 // CLI is the root Kong CLI struct.
 type CLI struct {
-	LogLevel LogLevel `help:"Log level (one of: ${log_enum})." default:"${log_default}" enum:"${log_enum}" short:"l"`
+	LogLevel LogLevel `help:"Log level (one of: ${enum})." default:"info" enum:"debug,info,warn,error" short:"l"`
 	Commands
 }
 
