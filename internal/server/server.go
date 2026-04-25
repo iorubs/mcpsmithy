@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 // Engine is the interface that tool engines must implement to be served
@@ -28,14 +29,27 @@ type Server struct {
 	tp     Transport
 }
 
-// New creates a server using the stdio transport.
-func New(eng Engine, r io.Reader, w io.Writer) *Server {
-	return &Server{engine: eng, tp: newStdio(r, w)}
+// Option configures a Server.
+type Option func(*Server)
+
+// WithHTTP configures the server to use the HTTP/SSE transport bound to addr (e.g. ":8080").
+func WithHTTP(addr string) Option {
+	return func(s *Server) { s.tp = newHTTP(addr) }
 }
 
-// NewHTTP creates a server using the HTTP/SSE transport bound to addr (e.g. ":8080").
-func NewHTTP(eng Engine, addr string) *Server {
-	return &Server{engine: eng, tp: newHTTP(addr)}
+// WithStreams configures the server to use the stdio transport with the given reader and writer.
+func WithStreams(r io.Reader, w io.Writer) Option {
+	return func(s *Server) { s.tp = newStdio(r, w) }
+}
+
+// New creates a server using the stdio transport (os.Stdin/os.Stdout by default).
+// Use WithHTTP or WithStreams to override the transport.
+func New(eng Engine, opts ...Option) *Server {
+	s := &Server{engine: eng, tp: newStdio(os.Stdin, os.Stdout)}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 // SwapEngine atomically replaces the running engine and notifies

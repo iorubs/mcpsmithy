@@ -16,7 +16,7 @@ automatically.
 
 ```
 cmd/mcpsmithy/main.go  → Entry point: kong.Parse() only, no logic
-internal/commands/        → One file per subcommand; CLI root struct in commands.go
+pkg/cmd/               → One file per subcommand; CLI root struct in commands.go
 ```
 
 Each subcommand is a struct with a `Run(*CLI) error` method. Global
@@ -37,7 +37,7 @@ accessed via helper methods (`LoadConfig`, `Logger`, `ProjectRoot`).
 
 ## Adding a New Command
 
-1. Create `internal/commands/<name>.go`.
+1. Create `pkg/cmd/<name>.go`.
 2. Define a struct with a `Run(*CLI) error` method.
 3. Add the struct as a field on `CLI` in `commands.go` with `cmd:""` and `help:""` tags.
 4. Run `go run ./cmd/gen-docs` to regenerate the reference docs.

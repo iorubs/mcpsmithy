@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/glob"
-	"github.com/operator-assistant/mcpsmithy/internal/search"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/glob"
+	"github.com/iorubs/mcpsmithy/internal/search"
 )
 
 // sourcesDir is the directory under the project root where fetched sources are stored.

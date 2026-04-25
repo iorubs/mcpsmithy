@@ -5,7 +5,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 func TestSkipFetch(t *testing.T) {

@@ -12,10 +12,10 @@ import (
 	"text/template"
 	"unicode/utf8"
 
-	"github.com/operator-assistant/mcpsmithy/internal/auth"
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/conventions"
-	"github.com/operator-assistant/mcpsmithy/internal/search"
+	"github.com/iorubs/mcpsmithy/internal/auth"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/conventions"
+	"github.com/iorubs/mcpsmithy/internal/search"
 )
 
 // defaultMaxReadKB is the default HTTP response body cap (10 MB) used by

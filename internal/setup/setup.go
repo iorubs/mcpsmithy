@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config/schema"
 )
 
 //go:embed sections/*.md

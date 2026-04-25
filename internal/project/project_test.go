@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/project"
-	"github.com/operator-assistant/mcpsmithy/internal/project/sources"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/project"
+	"github.com/iorubs/mcpsmithy/internal/project/sources"
 )
 
 // writeFixture writes files into dir for use as local source content.

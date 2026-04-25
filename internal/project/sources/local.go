@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 func init() {

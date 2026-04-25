@@ -1,10 +1,11 @@
-package commands
+package cmd
 
 import (
 	"context"
 	"log/slog"
 
-	"github.com/operator-assistant/mcpsmithy/internal/project"
+	"github.com/iorubs/mcpsmithy/internal/project"
+	"github.com/iorubs/mcpsmithy/pkg/api"
 )
 
 // SourcesCmd is the command group for source management.
@@ -17,7 +18,7 @@ type SourcesPullCmd struct{}
 
 // Run executes sources pull.
 func (cmd *SourcesPullCmd) Run(ctx context.Context, cli *CLI) error {
-	cfg, root, err := cli.LoadConfig()
+	cfg, root, err := api.LoadConfig(cli.Config)
 	if err != nil {
 		return err
 	}

@@ -59,7 +59,7 @@ conventions:
       - docs/development/ — contributors: architecture, design decisions,
         tag specs, extension guides. This is where specifications live.
       - Code comments: never add redundant comments. Follow the conventions outlined in the docs.
-      - Config versioning lives in internal/config and internal/commands; use tags and gen-docs to generate user config and CLI user reference docs.
+      - Config versioning lives in internal/config and pkg/cmd; use tags and gen-docs to generate user config and CLI user reference docs.
       Don't duplicate across layers. When writing or reviewing docs, ask
       "who is the reader?" and put the content in the right place.
 

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )

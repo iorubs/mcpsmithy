@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 const sourceKindGit = "git"

@@ -271,16 +271,6 @@ func TestStdioTransportServesCorrectly(t *testing.T) {
 	}
 }
 
-func TestNewHTTPConstructor(t *testing.T) {
-	srv := NewHTTP(newTestEngine(t), ":0")
-	if srv == nil {
-		t.Fatal("NewHTTP returned nil")
-	}
-	if _, ok := srv.tp.(*httpTransport); !ok {
-		t.Fatalf("expected *httpTransport, got %T", srv.tp)
-	}
-}
-
 func TestHTTPNotifyBroadcastsToAllSessions(t *testing.T) {
 	hs, srv := testHTTPServer(t)
 

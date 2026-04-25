@@ -17,8 +17,8 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
-	v1 "github.com/operator-assistant/mcpsmithy/internal/config/v1"
+	"github.com/iorubs/mcpsmithy/internal/config/schema"
+	v1 "github.com/iorubs/mcpsmithy/internal/config/v1"
 	"go.yaml.in/yaml/v4"
 )
 

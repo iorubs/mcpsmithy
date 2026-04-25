@@ -9,9 +9,9 @@ import (
 	"text/template"
 	"unicode/utf8"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/conventions"
-	"github.com/operator-assistant/mcpsmithy/internal/project"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/conventions"
+	"github.com/iorubs/mcpsmithy/internal/project"
 )
 
 type handler func(ctx context.Context, params map[string]any) (string, error)

@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 func TestBuildJSONSchema(t *testing.T) {

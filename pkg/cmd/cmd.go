@@ -1,13 +1,11 @@
-// Package commands implements the CLI subcommands.
-package commands
+// Package cmd implements the CLI subcommands.
+package cmd
 
 import (
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-
-	"github.com/operator-assistant/mcpsmithy/internal/config"
 )
 
 // LogLevel represents a supported log verbosity level.
@@ -28,27 +26,6 @@ type CLI struct {
 	Validate ValidateCmd `cmd:"" help:"Validate config file."`
 	Sources  SourcesCmd  `cmd:"" help:"Manage sources."`
 	Setup    SetupCmd    `cmd:"" help:"Start the config-authoring assistant (no config required)."`
-}
-
-// LoadConfig loads and validates the config, logs any warnings, and
-// resolves the project root. This is the standard entry point for
-// subcommands that need config + root.
-func (cli *CLI) LoadConfig() (*config.Config, string, error) {
-	data, err := os.ReadFile(cli.Config)
-	if err != nil {
-		return nil, "", fmt.Errorf("config: %w", err)
-	}
-	cfg, err := config.Parse(data)
-	if err != nil {
-		return nil, "", fmt.Errorf("config: %w", err)
-	}
-
-	root, err := cli.ProjectRoot()
-	if err != nil {
-		return nil, "", fmt.Errorf("resolving project root: %w", err)
-	}
-
-	return cfg, root, nil
 }
 
 // ProjectRoot resolves the project root from the config file location.

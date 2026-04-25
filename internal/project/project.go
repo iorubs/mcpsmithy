@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/project/sources"
-	"github.com/operator-assistant/mcpsmithy/internal/search"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/project/sources"
+	"github.com/iorubs/mcpsmithy/internal/search"
 )
 
 // sourcesDir is the directory under root where fetched sources are stored.
