@@ -20,8 +20,13 @@ const (
 
 // CLI is the root Kong CLI struct.
 type CLI struct {
+	LogLevel LogLevel `help:"Log level." default:"info" enum:"debug,info,warn,error" short:"l"`
+	Commands
+}
+
+// Commands holds the subcommands and config, safe to embed.
+type Commands struct {
 	Config   string      `help:"Path to config file." default:".mcpsmithy.yaml" type:"path" short:"c"`
-	LogLevel LogLevel    `help:"Log level." default:"info" enum:"debug,info,warn,error" short:"l"`
 	Serve    ServeCmd    `cmd:"" help:"Start the MCP server."`
 	Validate ValidateCmd `cmd:"" help:"Validate config file."`
 	Sources  SourcesCmd  `cmd:"" help:"Manage sources."`
