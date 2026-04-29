@@ -11,13 +11,12 @@ mcpsmithy <command> [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `-h, --help` | `bool` | — | Show context-sensitive help. |
-| `-c, --config` | `string` | `.mcpsmithy.yaml` | Path to config file. |
-| `-l, --log-level` | `enum(debug,info,warn,error)` | `info` | Log level. |
+| `-l, --log-level` | `enum(debug,info,warn,error)` | `info` | Log level (one of: debug,info,warn,error). |
 
 
 ### serve
 
-Start the MCP server.
+Run MCP server.
 
 ```
 mcpsmithy serve [flags]
@@ -25,6 +24,7 @@ mcpsmithy serve [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
+| `-c, --config` | `string` | `.mcpsmithy.yaml` | Path to config. |
 | `--transport` | `enum(stdio,http)` | `stdio` | Transport to use. |
 | `--addr` | `string` | `:8080` | Listen address (HTTP transport only). |
 | `--watch` | `bool` | `false` | Watch config file and hot-reload on change. |
@@ -37,6 +37,11 @@ Validate config file.
 ```
 mcpsmithy validate [flags]
 ```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `.mcpsmithy.yaml` | Path to config. |
+
 
 ### sources
 
@@ -54,9 +59,14 @@ Fetch external sources and write them to disk.
 mcpsmithy sources pull [flags]
 ```
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `.mcpsmithy.yaml` | Path to config. |
+
+
 ### setup
 
-Start the config-authoring assistant (no config required).
+Start config-authoring MCP server assistant.
 
 ```
 mcpsmithy setup [flags]
