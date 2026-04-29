@@ -3,12 +3,18 @@ package server
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/tools"
 )
+
+// WithStreams configures the server to use the stdio transport with the given reader and writer.
+func WithStreams(r io.Reader, w io.Writer) Option {
+	return func(s *Server) { s.tp = newStdio(r, w) }
+}
 
 func newTestEngine(t *testing.T) *tools.Engine {
 	t.Helper()

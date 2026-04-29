@@ -2,10 +2,7 @@
 package cmd
 
 import (
-	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 )
 
 // LogLevel represents a supported log verbosity level.
@@ -34,21 +31,6 @@ type Commands struct {
 
 type ConfigFlag struct {
 	Config string `help:"Path to config." default:".mcpsmithy.yaml" type:"path" short:"c"`
-}
-
-// ProjectRoot resolves the project root from the config file location.
-// The root is always the directory containing the config file.
-func ProjectRoot(path string) (string, error) {
-	if path != "" {
-		info, err := os.Stat(path)
-		if err == nil {
-			if info.IsDir() {
-				return "", fmt.Errorf("config path %q is a directory, not a file", path)
-			}
-			return filepath.Abs(filepath.Dir(path))
-		}
-	}
-	return filepath.Abs(".")
 }
 
 // ParseLogLevel maps the CLI log-level flag to slog.Level.

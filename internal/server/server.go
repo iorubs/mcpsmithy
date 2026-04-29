@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"sync"
@@ -37,13 +36,7 @@ func WithHTTP(addr string) Option {
 	return func(s *Server) { s.tp = newHTTP(addr) }
 }
 
-// WithStreams configures the server to use the stdio transport with the given reader and writer.
-func WithStreams(r io.Reader, w io.Writer) Option {
-	return func(s *Server) { s.tp = newStdio(r, w) }
-}
-
 // New creates a server using the stdio transport (os.Stdin/os.Stdout by default).
-// Use WithHTTP or WithStreams to override the transport.
 func New(eng Engine, opts ...Option) *Server {
 	s := &Server{engine: eng, tp: newStdio(os.Stdin, os.Stdout)}
 	for _, o := range opts {

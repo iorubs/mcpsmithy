@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
-	"time"
 
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/server"
@@ -48,55 +46,4 @@ func Serve(ctx context.Context, cfg *config.Config, opts ServeOptions) error {
 	slog.InfoContext(ctx, "ready", "project", cfg.Project.Name, "root", opts.Root, "tools", len(cfg.Tools))
 
 	return srv.Serve(ctx)
-}
-
-// watchConfig polls the config file for mtime changes and hot-reloads on change.
-func watchConfig(ctx context.Context, path string, srv *server.Server) {
-	const pollInterval = 2 * time.Second
-	const debounceDelay = 500 * time.Millisecond
-
-	info, err := os.Stat(path)
-	if err != nil {
-		slog.ErrorContext(ctx, "watch: cannot stat config", "err", err)
-		return
-	}
-	lastMod := info.ModTime()
-
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
-
-	var debounce *time.Timer
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			fi, err := os.Stat(path)
-			if err != nil || !fi.ModTime().After(lastMod) {
-				continue
-			}
-			lastMod = fi.ModTime()
-			if debounce != nil {
-				debounce.Stop()
-			}
-			debounce = time.AfterFunc(debounceDelay, func() {
-				reload(ctx, path, srv)
-			})
-		}
-	}
-}
-
-func reload(ctx context.Context, path string, srv *server.Server) {
-	cfg, root, err := LoadConfig(path)
-	if err != nil {
-		slog.ErrorContext(ctx, "reload: config error, keeping previous engine", "err", err)
-		return
-	}
-	eng, err := tools.New(ctx, cfg, root)
-	if err != nil {
-		slog.ErrorContext(ctx, "reload: engine build failed, keeping previous engine", "err", err)
-		return
-	}
-	srv.SwapEngine(eng)
-	slog.InfoContext(ctx, "reload: engine swapped", "tools", len(cfg.Tools))
 }
