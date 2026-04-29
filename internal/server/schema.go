@@ -1,6 +1,6 @@
 package server
 
-import "github.com/operator-assistant/mcpsmithy/internal/config"
+import "github.com/iorubs/mcpsmithy/internal/config"
 
 // buildJSONSchema turns param configs into a JSON Schema object.
 func buildJSONSchema(params []config.ToolParam) map[string]any {

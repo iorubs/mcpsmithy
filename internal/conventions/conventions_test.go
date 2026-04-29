@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 func TestScopeTags(t *testing.T) {

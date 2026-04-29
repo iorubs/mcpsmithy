@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
+	"github.com/iorubs/mcpsmithy/internal/config/schema"
 )
 
 // Version is the schema version this package handles.

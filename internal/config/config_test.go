@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
+	"github.com/iorubs/mcpsmithy/internal/config/schema"
 )
 
 // TestDocsComplete verifies every type, field, and enum value reachable from

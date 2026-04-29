@@ -7,9 +7,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/conventions"
-	"github.com/operator-assistant/mcpsmithy/internal/project"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/conventions"
+	"github.com/iorubs/mcpsmithy/internal/project"
 )
 
 func testEngine(t *testing.T, cfg *config.Config) *Engine {

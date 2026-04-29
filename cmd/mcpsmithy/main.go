@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/alecthomas/kong"
-	"github.com/operator-assistant/mcpsmithy/internal/commands"
+	"github.com/iorubs/mcpsmithy/pkg/cmd"
 )
 
 func main() {
@@ -21,16 +21,17 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	var cli commands.CLI
+	var cli cmd.CLI
 	kctx := kong.Parse(&cli,
 		kong.Name("mcpsmithy"),
 		kong.Description("Project-agnostic MCP tool server. Reads .mcpsmithy.yaml and serves MCP tools over stdio."),
 		kong.UsageOnError(),
+		kong.HelpOptions{Compact: true, NoExpandSubcommands: true},
 		kong.BindTo(ctx, (*context.Context)(nil)),
 	)
 
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level: commands.ParseLogLevel(cli.LogLevel),
+		Level: cmd.ParseLogLevel(cli.LogLevel),
 	})))
 
 	kctx.FatalIfErrorf(kctx.Run(&cli))

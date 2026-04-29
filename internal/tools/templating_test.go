@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/search"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/search"
 )
 
 func TestConventionsForIncludesDescriptions(t *testing.T) {

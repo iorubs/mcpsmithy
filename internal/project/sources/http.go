@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/operator-assistant/mcpsmithy/internal/auth"
-	"github.com/operator-assistant/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/auth"
+	"github.com/iorubs/mcpsmithy/internal/config"
 )
 
 const sourceKindHTTP = "http"

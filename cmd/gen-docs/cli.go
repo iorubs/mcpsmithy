@@ -7,7 +7,7 @@ import (
 	"text/template"
 
 	"github.com/alecthomas/kong"
-	"github.com/operator-assistant/mcpsmithy/internal/commands"
+	"github.com/iorubs/mcpsmithy/pkg/cmd"
 )
 
 // CommandData holds a Kong node with pre-filtered flags, args, and subcommands
@@ -31,7 +31,7 @@ var cliOutDir = filepath.Join("docs", "user", "reference", "server")
 
 // generateCLIDocs generates a single CLI reference page from the Kong parser model.
 func generateCLIDocs() error {
-	var cli commands.CLI
+	var cli cmd.CLI
 	parser, err := kong.New(&cli,
 		kong.Description("Project-agnostic MCP tool server. Reads .mcpsmithy.yaml and serves MCP tools over stdio."),
 	)

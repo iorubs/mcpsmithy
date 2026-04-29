@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/glob"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/glob"
 )
 
 // RawDoc is a fetched document before chunking/indexing.

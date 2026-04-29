@@ -4,7 +4,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/operator-assistant/mcpsmithy/internal/glob"
+	"github.com/iorubs/mcpsmithy/internal/glob"
 )
 
 func TestToRegexp(t *testing.T) {

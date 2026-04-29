@@ -3,12 +3,18 @@ package server
 import (
 	"bytes"
 	"context"
+	"io"
 	"strings"
 	"testing"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config"
-	"github.com/operator-assistant/mcpsmithy/internal/tools"
+	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/iorubs/mcpsmithy/internal/tools"
 )
+
+// WithStreams configures the server to use the stdio transport with the given reader and writer.
+func WithStreams(r io.Reader, w io.Writer) Option {
+	return func(s *Server) { s.tp = newStdio(r, w) }
+}
 
 func newTestEngine(t *testing.T) *tools.Engine {
 	t.Helper()
@@ -34,7 +40,7 @@ func testServer(t *testing.T, input string) string {
 	eng := newTestEngine(t)
 	reader := strings.NewReader(input)
 	var out bytes.Buffer
-	srv := New(eng, reader, &out)
+	srv := New(eng, WithStreams(reader, &out))
 	_ = srv.Serve(context.Background())
 	return out.String()
 }
@@ -126,7 +132,7 @@ func TestSwapEngineSendsToolsListChanged(t *testing.T) {
 	eng := newTestEngine(t)
 	reader := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}` + "\n")
 	var out bytes.Buffer
-	srv := New(eng, reader, &out)
+	srv := New(eng, WithStreams(reader, &out))
 
 	// Serve processes the ping, then hits EOF.
 	_ = srv.Serve(context.Background())

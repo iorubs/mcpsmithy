@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/operator-assistant/mcpsmithy/internal/config/schema"
+	"github.com/iorubs/mcpsmithy/internal/config/schema"
 	"go.yaml.in/yaml/v4"
 )
 
