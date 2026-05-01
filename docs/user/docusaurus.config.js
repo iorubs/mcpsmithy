@@ -8,25 +8,6 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
-// Shared family navbar items. Keep in sync across all four smithy sites.
-const familyNavItems = [
-  {
-    href: 'https://iorubs.github.io/smithy-cli/',
-    label: 'CLI',
-    position: 'left',
-  },
-  {
-    href: 'https://iorubs.github.io/mcpsmithy/',
-    label: 'MCPSmithy',
-    position: 'left',
-  },
-  {
-    href: 'https://iorubs.github.io/agentsmithy/',
-    label: 'AgentSmithy',
-    position: 'left',
-  },
-];
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'MCPSmithy',
@@ -93,21 +74,32 @@ const config = {
         respectPrefersColorScheme: true,
       },
       navbar: {
-        title: 'MCPSmithy',
+        title: 'Smithy',
         logo: {
-          alt: 'mcpsmithy',
+          alt: 'smithy',
           src: 'img/logo.svg',
           href: 'https://iorubs.github.io/smithy/',
           target: '_self',
         },
         items: [
-          ...familyNavItems,
           {
-            type: 'docSidebar',
-            sidebarId: 'docsSidebar',
+            href: 'https://iorubs.github.io/smithy-cli/',
+            label: 'CLI',
             position: 'left',
-            label: 'Documentation',
-          }, {
+            target: '_self',
+          },
+          {
+            to: '/',
+            label: 'MCPSmithy',
+            position: 'left',
+          },
+          {
+            href: 'https://iorubs.github.io/agentsmithy/',
+            label: 'AgentSmithy',
+            position: 'left',
+            target: '_self',
+          },
+          {
             href: 'https://github.com/iorubs/mcpsmithy',
             position: 'right',
             label: 'GitHub',

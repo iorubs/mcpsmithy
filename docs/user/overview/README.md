@@ -44,6 +44,6 @@ The server speaks MCP over JSON-RPC 2.0. It uses stdio by default
 (the MCP client spawns the binary directly) or HTTP/SSE for Docker
 and remote deployments.
 
-### Reference docs:
+### Reference docs
 - [Config Reference](../reference/config/README.md)
 - [Server Reference](../reference/server/README.md)
