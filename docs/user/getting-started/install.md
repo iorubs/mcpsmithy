@@ -21,7 +21,7 @@ go install github.com/iorubs/mcpsmithy/cmd/mcpsmithy@latest
 
 Optionally, move the binary to a directory in your `PATH`:
 
-**VS Code** — add to `.vscode/mcp.json`:
+**VS Code**; add to `.vscode/mcp.json`:
 
 ```json
 {
@@ -45,7 +45,7 @@ docker build mcpsmithy:latest
 
 ### Connect your agent
 
-**VS Code** — add to `.vscode/mcp.json`:
+**VS Code**; add to `.vscode/mcp.json`:
 
 ```json
 {

@@ -11,7 +11,7 @@ import (
 )
 
 // LiveIndex provides safe atomic access to a swappable Index.
-// Create with NewLiveIndex. Safe for concurrent use — Get and Len
+// Create with NewLiveIndex. Safe for concurrent use; Get and Len
 // can be called freely alongside Swap.
 type LiveIndex struct {
 	ptr atomic.Pointer[Index]
@@ -116,7 +116,7 @@ func NewIndex(chunks []Chunk) *Index {
 }
 
 // Merge appends new chunks to the index. It is safe for concurrent use
-// with Search — callers can merge in additional content while searches
+// with Search; callers can merge in additional content while searches
 // continue. Returns the number of chunks added.
 func (idx *Index) Merge(chunks []Chunk) int {
 	if len(chunks) == 0 {
@@ -292,7 +292,7 @@ func tokenize(text string) []string {
 }
 
 // stem applies lightweight suffix stripping to normalize word forms.
-// Not a full Porter stemmer — just common English suffixes with minimum
+// Not a full Porter stemmer; just common English suffixes with minimum
 // length guards to avoid over-stemming short words.
 func stem(word string) string {
 	n := len(word)

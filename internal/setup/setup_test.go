@@ -32,14 +32,14 @@ func TestExecute(t *testing.T) {
 		// config_guide
 		{"guide returns overview", toolConfigGuide, nil, false, []string{"version"}},
 
-		// config_section — valid
+		// config_section: valid
 		{"section project", toolConfigSection, map[string]any{"section": "project"}, false, []string{"project", "Field Reference"}},
 		{"section conventions", toolConfigSection, map[string]any{"section": "conventions"}, false, []string{"convention"}},
 		{"section tools", toolConfigSection, map[string]any{"section": "tools"}, false, []string{"tool"}},
 		{"case insensitive upper", toolConfigSection, map[string]any{"section": "PROJECT"}, false, []string{"project"}},
 		{"case insensitive mixed", toolConfigSection, map[string]any{"section": "Tools"}, false, []string{"tool"}},
 
-		// config_section — errors
+		// config_section: errors
 		{"unknown section", toolConfigSection, map[string]any{"section": "banana"}, true, nil},
 		{"empty section key", toolConfigSection, map[string]any{}, true, nil},
 		{"nil params", toolConfigSection, nil, true, []string{"section"}},

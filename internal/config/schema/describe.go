@@ -10,8 +10,7 @@ import (
 
 // Describe walks the type tree rooted at v (typically a zero-value config
 // struct like v1.Config{}) and produces a SchemaDoc using reflection and
-// struct tags. Documentation strings come from docs (populated from Go
-// source comments via go/ast).
+// struct tags. Documentation strings come from docs (populated from Go source comments via go/ast).
 func Describe(v any, version string, docs DocProvider) SchemaDoc {
 	rootType := reflect.TypeOf(v)
 	for rootType.Kind() == reflect.Pointer {

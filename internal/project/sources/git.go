@@ -46,8 +46,7 @@ type GitSource struct {
 
 // Fetch clones the git repository to disk.
 // Credentials come from the environment (SSH keys, git credential
-// helpers, .netrc). If destDir already exists it is removed first
-// to ensure a clean clone.
+// helpers, .netrc). If destDir already exists it is removed first to ensure a clean clone.
 func (s *GitSource) Fetch(ctx context.Context) error {
 	if skipFetch(s.policy, s.destDir) {
 		return nil

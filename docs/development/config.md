@@ -1,6 +1,6 @@
 # Config Design
 
-Developer guide for the `.mcpsmithy.yaml` config format — schema
+Developer guide for the `.mcpsmithy.yaml` config format; schema
 design, versioning, and how to extend it. For the user-facing field
 reference, see the auto-generated docs in
 [`docs/user/reference/config/`](../user/reference/config/README.md).
@@ -29,11 +29,11 @@ Two consumers read this tag:
 
 | Consumer | What it does |
 |----------|--------------|
-| **schema.Process** | Single call that applies defaults, validates required fields, enum values, oneof groups, min bounds, and ref constraints — recurses into nested structs, maps, and slices automatically |
+| **schema.Process** | Single call that applies defaults, validates required fields, enum values, oneof groups, min bounds, and ref constraints; recurses into nested structs, maps, and slices automatically |
 | **Doc generator** | Parses tags via go/ast to build the reference tables |
 
 This eliminates drift between documentation, validation, and
-defaulting — change the tag once, all consumers update automatically.
+defaulting; change the tag once, all consumers update automatically.
 
 ### Enum types and the `Valuer` interface
 
@@ -47,7 +47,7 @@ func (PullPolicy) Values() []string {
 ```
 
 `schema.Process` checks non-zero fields whose type implements
-`Valuer` — no per-field validation code needed. Adding a new enum
+`Valuer`; no per-field validation code needed. Adding a new enum
 value means updating the const block and the `Values()` method in
 one place.
 
@@ -67,7 +67,7 @@ Two error cases:
 - Neither set → allowed (both are optional)
 - Both set → `"enum and min are mutually exclusive"`
 
-The group name is a free-form label — pick something descriptive.
+The group name is a free-form label; pick something descriptive.
 The `?` suffix makes the group optional (zero fields is OK).
 The doc generator renders these fields as **oneof** in the Required
 column.
@@ -87,7 +87,7 @@ type, converting if needed.
    dispatches to the correct versioned parser (e.g., `v1.Parse()`).
 3. The versioned parser YAML-decodes with strict mode, calls
    `schema.Process()`, and returns `*Config` already in the latest type
-   (for v1 this is direct — v1 **is** the latest).
+   (for v1 this is direct; v1 **is** the latest).
 4. The rest of the codebase operates on the latest types via type
    aliases in `config.go`.
 
@@ -118,7 +118,7 @@ protocol version.
 
 ### Tools
 
-Every tool requires a `template:` field — a Go `text/template` string.
+Every tool requires a `template:` field; a Go `text/template` string.
 
 ### Built-in Template Functions
 
@@ -139,7 +139,7 @@ mismatches, and undeclared parameter references.
 3. If the field is required, set `mcpsmithy:"required"`.
 4. Add any semantic validation in `internal/config/v1/types.go` (e.g. a
    `Validate() error` method) or `internal/config/schema/process.go`.
-5. Run `go run ./cmd/gen-docs/` — the user reference updates
+5. Run `go run ./cmd/gen-docs/`; the user reference updates
    automatically.
 
 ## Adding a New Built-in Function
@@ -148,7 +148,7 @@ mismatches, and undeclared parameter references.
    typed stub for it in the `template.FuncMap` inside `Tool.Validate()`.
 2. Implement the function in `internal/tools/templating.go`.
 3. Register it in `funcMap()` (same file).
-4. Add a doc comment on the `BuiltinFunc` const — it's picked up automatically to generate the user reference docs.
+4. Add a doc comment on the `BuiltinFunc` const; it's picked up automatically to generate the user reference docs.
 5. Add tests alongside the implementation.
 6. Add an example to `docs/user/examples/`.
 
@@ -159,7 +159,7 @@ When the config schema needs breaking changes:
 1. Create `internal/config/vN/` with its own `types.go`, `parse.go`,
    and `const Version = "N"`.
 2. Add `mcpsmithy` tags to all yaml-tagged fields.
-3. Implement `Parse()` — YAML-decode with strict mode, call `schema.Process`,
+3. Implement `Parse()`; YAML-decode with strict mode, call `schema.Process`,
    convert the result to the **latest** `*Config` type, and return it.
    (For vN when vN is the new latest, conversion is direct.)
 4. Update `parse.go` of the **previous** version to convert its decoded
@@ -167,5 +167,5 @@ When the config schema needs breaking changes:
 5. Update the type aliases in `config.go` to point to vN.
 6. Add a `case vN.Version:` branch in `config.Parse()` (i.e. register
    `vN.Schema{}` in the `Versions` map).
-7. Run `go run ./cmd/gen-docs/` — user-facing reference updates
+7. Run `go run ./cmd/gen-docs/`; user-facing reference updates
    automatically.

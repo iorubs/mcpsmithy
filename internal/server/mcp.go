@@ -3,8 +3,7 @@ package server
 const (
 	// protocolVersion is the latest MCP protocol version implemented by
 	// this server. Returned during initialization per the MCP version
-	// negotiation spec — the client decides whether it can work with
-	// this version.
+	// negotiation spec; the client decides whether it can work with this version.
 	protocolVersion = "2025-11-25"
 
 	// serverName and serverVersion identify this implementation.

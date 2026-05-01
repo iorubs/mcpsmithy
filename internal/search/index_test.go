@@ -147,8 +147,7 @@ func TestStemMatchesAcrossQuery(t *testing.T) {
 }
 
 func TestTermFrequencyBoost(t *testing.T) {
-	// Document with "kubernetes" appearing 3 times should rank higher
-	// than one with it appearing once.
+	// Document with "kubernetes" appearing 3 times should rank higher than one with it appearing once.
 	chunks := []Chunk{
 		{Source: "once.md", Title: "Once", Body: "kubernetes is mentioned once here with other words"},
 		{Source: "many.md", Title: "Many", Body: "kubernetes kubernetes kubernetes core concept"},

@@ -120,7 +120,7 @@ func chunkMarkdown(source, content string) []Chunk {
 
 // markdownHeadingLevel returns the ATX heading depth (1–6) and trimmed
 // title text if line is a valid Markdown heading, or (0, "") otherwise.
-// Requires a space after the # characters — bare "#tag" is not a heading.
+// Requires a space after the # characters; bare "#tag" is not a heading.
 func markdownHeadingLevel(line string) (int, string) {
 	if len(line) == 0 || line[0] != '#' {
 		return 0, ""
@@ -136,8 +136,7 @@ func markdownHeadingLevel(line string) (int, string) {
 }
 
 // stripFrontmatter removes YAML frontmatter (---…---) from the start of
-// Markdown content. If no valid frontmatter block is found, content is
-// returned unchanged.
+// Markdown content. If no valid frontmatter block is found, content is returned unchanged.
 func stripFrontmatter(content string) string {
 	const sep = "---"
 	if !strings.HasPrefix(content, sep+"\n") && !strings.HasPrefix(content, sep+"\r\n") {
@@ -169,5 +168,5 @@ func stripFrontmatter(content string) string {
 			return after
 		}
 	}
-	return content // no closing delimiter — leave untouched
+	return content // no closing delimiter; leave untouched
 }

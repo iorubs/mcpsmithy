@@ -127,8 +127,7 @@ func (m *indexManager) processSources(ctx context.Context, entries []sourceEntry
 	}
 }
 
-// processEntry handles a single source entry: optional fetch then optional
-// index merge.
+// processEntry handles a single source entry: optional fetch then optional index merge.
 func (m *indexManager) processEntry(ctx context.Context, e sourceEntry, skipIndex bool) {
 	if e.kind != "local" {
 		slog.InfoContext(ctx, "fetching source", "name", e.name, "kind", e.kind)

@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// ── Constants ────────────────────────────────────────────────────────────────
 
 // tagName is the struct tag key used by mcpsmithy for field metadata.
 const tagName = "mcpsmithy"
@@ -19,11 +18,9 @@ const ReservedContextKey = "mcpsmithy"
 // User-defined param names must not collide with any of these.
 var reservedContextKeys = []string{ReservedContextKey}
 
-// ── Interfaces ───────────────────────────────────────────────────────────────
 
 // valuer is implemented by named string types that have a fixed set of
-// valid values (enums). Process checks non-zero fields whose type
-// implements this interface.
+// valid values (enums). Process checks non-zero fields whose type implements this interface.
 type valuer interface {
 	Values() []string
 }
@@ -64,7 +61,6 @@ type typeClassifier interface {
 
 var typeClassifierType = reflect.TypeFor[typeClassifier]()
 
-// ── Shared reflection helpers ────────────────────────────────────────────────
 
 // isZero reports whether a value is the zero value for its type.
 func isZero(v reflect.Value) bool {
@@ -101,8 +97,7 @@ func findFieldByYAMLName(rv reflect.Value, rt reflect.Type, yamlName string) (re
 	return reflect.Value{}, false
 }
 
-// unwrapType resolves the leaf element type by peeling off pointers, slices,
-// and map values.
+// unwrapType resolves the leaf element type by peeling off pointers, slices, and map values.
 func unwrapType(t reflect.Type) reflect.Type {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -119,7 +114,6 @@ func unwrapType(t reflect.Type) reflect.Type {
 	return t
 }
 
-// ── Output types ─────────────────────────────────────────────────────────────
 
 // SchemaDoc holds the fully described schema for a config version.
 type SchemaDoc struct {

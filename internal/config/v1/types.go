@@ -34,7 +34,7 @@ type Config struct {
 
 // Project tells the AI what this codebase is. Name and description appear
 // in tool responses (e.g. project_info). Sources declare where code, docs,
-// and other content live — the AI uses them for search and orientation.
+// and other content live; the AI uses them for search and orientation.
 type Project struct {
 	// Human-readable project name shown in tool responses.
 	Name string `yaml:"name" mcpsmithy:"required"`
@@ -47,13 +47,12 @@ type Project struct {
 }
 
 // ProjectSources groups content the AI can search or reference.
-// Each source type (local, scrape, git, http) is a named map — the
-// names are used in convention docs entries to link conventions to
-// specific content.
+// Each source type (local, scrape, git, http) is a named map; the
+// names are used in convention docs entries to link conventions to specific content.
 //
 // Sources serve two purposes:
-//   - Structure — sources with index: false describe where things live.
-//   - Search — sources with index: true (default) are indexed for full-text search.
+//   - Structure; sources with index: false describe where things live.
+//   - Search; sources with index: true (default) are indexed for full-text search.
 type ProjectSources struct {
 	// Global pull policy for all sources. Per-source values override this.
 	PullPolicy PullPolicy `yaml:"pullPolicy,omitempty" mcpsmithy:"default=ifNotPresent"`
@@ -79,7 +78,7 @@ const (
 	PullPolicyAlways PullPolicy = "always"
 	// Fetch only when the local cache is missing.
 	PullPolicyIfNotPresent PullPolicy = "ifNotPresent"
-	// Never fetch — only use sources already on disk.
+	// Never fetch; only use sources already on disk.
 	PullPolicyNever PullPolicy = "never"
 )
 
@@ -90,8 +89,7 @@ func (PullPolicy) Values() []string {
 
 // LocalSource points to files on disk relative to the project root.
 // Commonly used for source code, docs, configs, and test files.
-// Indexed for search by default; set index: false to expose them
-// as structure without indexing.
+// Indexed for search by default; set index: false to expose them as structure without indexing.
 type LocalSource struct {
 	// Glob patterns relative to project root.
 	Paths []string `yaml:"paths" mcpsmithy:"required"`
@@ -178,22 +176,21 @@ type HTTPSource struct {
 
 // Convention maps a file-path pattern to documentation and rules.
 // When the AI calls conventions_for with a file path, matching conventions
-// return their description, linked docs, tags, and relations — giving
+// return their description, linked docs, tags, and relations; giving
 // the AI the context it needs before generating or reviewing code.
 //
-// The map key is the convention's unique name, used in relations and
-// tool responses.
+// The map key is the convention's unique name, used in relations and tool responses.
 type Convention struct {
 	// Glob pattern that matches file paths this convention applies to.
 	// When the AI calls conventions_for with a file path, only conventions
 	// whose scope matches are returned.
 	//
 	// Supported patterns:
-	//   *        — matches any path (use as a global/catch-all convention)
-	//   **       — matches any number of path segments within a larger pattern
-	//   src/**   — all files under src/
-	//   *.go     — Go files in the root only
-	//   **/*.go  — all Go files at any depth
+	//   *       ; matches any path (use as a global/catch-all convention)
+	//   **      ; matches any number of path segments within a larger pattern
+	//   src/**  ; all files under src/
+	//   *.go    ; Go files in the root only
+	//   **/*.go ; all Go files at any depth
 	//
 	// Omit scope entirely to make a convention search-only: it will never be
 	// matched by file path but remains findable via search_for.
@@ -226,7 +223,7 @@ type ConventionRelations struct {
 // The source field must match a key under project.sources (local, scrape,
 // git, or http). Paths optionally narrow to specific files within that source.
 type DocRef struct {
-	// Source name — must match a key in project.sources (local, scrape, git, or http).
+	// Source name; must match a key in project.sources (local, scrape, git, or http).
 	Source string `yaml:"source" mcpsmithy:"required,ref=project.sources.local|project.sources.scrape|project.sources.git|project.sources.http"`
 	// Optional paths within the source to specific files.
 	Paths []string `yaml:"paths,omitempty"`
@@ -242,7 +239,7 @@ type Tool struct {
 	Description string `yaml:"description" mcpsmithy:"required"`
 	// Template body producing the tool's output.
 	Template TemplateString `yaml:"template" mcpsmithy:"required"`
-	// Input parameters the LLM varies per call — queries, file paths, search terms.
+	// Input parameters the LLM varies per call; queries, file paths, search terms.
 	Params []ToolParam `yaml:"params,omitempty"`
 	// Static key-value pairs set by the config author, invisible to the LLM.
 	// Injected into the template context alongside params at runtime.
@@ -251,7 +248,7 @@ type Tool struct {
 	// For example, wire maxResults from options (e.g. `{{ search_for .query .maxResults }}`)
 	// so the config author controls the budget, not the LLM.
 	//
-	// Reserved option: urlAllowList ([]string) — when set, http_get, http_post, and http_put
+	// Reserved option: urlAllowList ([]string); when set, http_get, http_post, and http_put
 	// reject any URL whose scheme://host is not in the list.
 	Options map[string]any `yaml:"options,omitempty"`
 	// When false params are not logged at DEBUG level. Default (nil/unset) logs params.
@@ -302,7 +299,7 @@ func (t Tool) Validate() error {
 }
 
 // ToolParam declares an input the AI provides when calling a tool.
-// Params appear in the tool's input schema — the AI sees names,
+// Params appear in the tool's input schema; the AI sees names,
 // types, and descriptions before deciding what values to pass.
 type ToolParam struct {
 	// Parameter name.
@@ -360,25 +357,24 @@ type ParamConstraints struct {
 type TemplateString string
 
 // BuiltinFunc names a template function available inside tool templates.
-// These are the only functions callable from template bodies — they cover
-// convention lookup, content search, file reading, HTTP fetching, and
-// text filtering.
+// These are the only functions callable from template bodies; they cover
+// convention lookup, content search, file reading, HTTP fetching, and text filtering.
 type BuiltinFunc string
 
 const (
-	// func(path string) string — Returns conventions matching a file path, including description and linked docs.
+	// func(path string) string; Returns conventions matching a file path, including description and linked docs.
 	BuiltinFuncConventionsFor BuiltinFunc = "conventions_for"
-	// func(query string, [maxResults int], [maxResultSize int]) string — Full-text search over indexed sources.
+	// func(query string, [maxResults int], [maxResultSize int]) string; Full-text search over indexed sources.
 	BuiltinFuncSearchFor BuiltinFunc = "search_for"
-	// func(path string, [maxFileSize int]) string — Reads local files matching a glob pattern within the project sandbox.
+	// func(path string, [maxFileSize int]) string; Reads local files matching a glob pattern within the project sandbox.
 	BuiltinFuncFileRead BuiltinFunc = "file_read"
-	// func(url string, [maxReadKB int]) (string, error) — HTTP GET with .netrc auth and ANSI stripping. Caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	// func(url string, [maxReadKB int]) (string, error); HTTP GET with .netrc auth and ANSI stripping. Caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPGet BuiltinFunc = "http_get"
-	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error) — HTTP POST with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error); HTTP POST with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPPost BuiltinFunc = "http_post"
-	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error) — HTTP PUT with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error); HTTP PUT with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPPut BuiltinFunc = "http_put"
-	// func(pattern string, before float64, after float64, input string) string — Filters input by regex pattern with context lines.
+	// func(pattern string, before float64, after float64, input string) string; Filters input by regex pattern with context lines.
 	BuiltinFuncGrep BuiltinFunc = "grep"
 )
 

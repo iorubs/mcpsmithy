@@ -132,8 +132,8 @@ func (t *stdio) Notify(method string) error {
 }
 
 // httpTransport implements MCP's SSE-based streaming transport:
-//   - GET  /sse     — long-lived SSE stream; server pushes JSON-RPC responses here
-//   - POST /message — client sends JSON-RPC requests here; server replies 202 Accepted
+//   - GET  /sse    ; long-lived SSE stream; server pushes JSON-RPC responses here
+//   - POST /message; client sends JSON-RPC requests here; server replies 202 Accepted
 //
 // Each SSE connection gets a unique session ID. The endpoint event includes the
 // session ID as a query parameter so POST /message responses route to the correct
@@ -222,7 +222,7 @@ func (t *httpTransport) sseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// Tell the client where to POST messages. The session ID rides along
-	// transparently — the client uses this URL verbatim.
+	// transparently; the client uses this URL verbatim.
 	fmt.Fprintf(w, "event: endpoint\ndata: /message?session_id=%s\n\n", sid)
 	flusher.Flush()
 

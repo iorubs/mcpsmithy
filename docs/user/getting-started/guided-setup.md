@@ -8,15 +8,15 @@ sidebar_position: 3
 `.mcpsmithy.yaml`. It exposes two tools designed specifically for
 config-authoring sessions:
 
-- **`config_guide`** — returns an overview of the config structure:
+- **`config_guide`**; returns an overview of the config structure:
   the top-level sections, how they relate, and an annotated minimal
   example. The right first call for any setup session.
-- **`config_section`** — returns a deep reference for one config
+- **`config_section`**; returns a deep reference for one config
   section (`project`, `conventions`, `tools`, `sources`): all fields,
   types, defaults, valid values, and a realistic example.
 
 Both tools are generated from the same schema that drives the
-validator — they are always accurate for the installed binary version.
+validator; they are always accurate for the installed binary version.
 
 ## Workflow
 
@@ -31,6 +31,6 @@ for each scenario.
 
 ## Notes
 
-- The agent writes the file using its own file tools — mcpsmithy stays read-only throughout.
+- The agent writes the file using its own file tools; mcpsmithy stays read-only throughout.
 - `config_guide` and `config_section` are only available in setup mode. They are not exposed by `mcpsmithy serve`.
 - If you already have a config and want to improve a specific section, skip `config_guide` and call `config_section` directly for the section you're working on.

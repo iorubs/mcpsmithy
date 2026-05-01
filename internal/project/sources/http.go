@@ -107,8 +107,7 @@ func (s *HTTPSource) Read(globs []string, prefix string) ([]RawDoc, error) {
 	return readFS(os.DirFS(s.destDir), globs, prefix)
 }
 
-// detectArchive returns true when the URL or Content-Type indicates a
-// gzipped tar archive.
+// detectArchive returns true when the URL or Content-Type indicates a gzipped tar archive.
 func detectArchive(rawURL, contentType string) bool {
 	lower := strings.ToLower(rawURL)
 	if strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz") {

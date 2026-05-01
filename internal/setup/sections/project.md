@@ -6,21 +6,21 @@ covers strategy.
 
 ### Setup Workflow
 
-1. **Examine local content** — read the directory tree, README, and
+1. **Examine local content**; read the directory tree, README, and
    any existing docs you can access directly. Understand the project
    structure before declaring sources.
 
-2. **Declare sources** — set `name` and `description`. Declare local
+2. **Declare sources**; set `name` and `description`. Declare local
    sources for source code, docs, tests, and config files. For remote
    sources (git, http, scrape), add a minimal entry with just the
-   required fields — enough to pull.
+   required fields; enough to pull.
 
-3. **Pull remote sources** — run `mcpsmithy sources pull`. This
+3. **Pull remote sources**; run `mcpsmithy sources pull`. This
    fetches remote content into `.mcpsmithy/` so you can examine it.
 
-4. **Examine remote content** — read the fetched files under
+4. **Examine remote content**; read the fetched files under
    `.mcpsmithy/`. Understand what each remote source actually
-   contains — its structure, doc topics, naming patterns — before
+   contains; its structure, doc topics, naming patterns; before
    writing conventions or tools that reference them.
 
 ### Keep the Description Relevant
@@ -36,7 +36,7 @@ separately.
 
 ### Git Authentication
 
-Git sources use your existing git credentials — SSH keys, credential
+Git sources use your existing git credentials; SSH keys, credential
 helpers, or HTTPS via `~/.netrc`.
 
 ### HTTP Source Authentication

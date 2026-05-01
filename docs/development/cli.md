@@ -8,7 +8,7 @@ no imperative flag registration. The struct layout is the source of
 truth; `gen-docs` reads it to produce the user-facing reference docs
 in `docs/user/reference/server/`.
 
-Do not document flags or command behaviour here — that lives in the
+Do not document flags or command behaviour here; that lives in the
 generated reference docs and must stay in sync with the code
 automatically.
 
@@ -33,7 +33,7 @@ accessed via helper methods (`LoadConfig`, `Logger`, `ProjectRoot`).
   need config. It loads, validates, logs warnings/errors, and
   resolves the project root in one call.
 - **Kong struct tags define the CLI surface.** Help text, defaults,
-  enums, and short flags are all declared in the tag — not in `Run`.
+  enums, and short flags are all declared in the tag; not in `Run`.
 
 ## Adding a New Command
 

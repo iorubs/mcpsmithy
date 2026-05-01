@@ -1,5 +1,5 @@
 // Command gen-docs generates Markdown reference documentation for
-// mcpsmithy — both CLI (from the Kong command tree) and config
+// mcpsmithy; both CLI (from the Kong command tree) and config
 // schema (from Go struct types and comments via go/ast).
 package main
 

@@ -8,7 +8,7 @@ sidebar_position: 4
 
 As an **Engineer**, I want my AI assistant to automatically know my
 project's conventions and structure so that generated code follows the
-right patterns — even with cheaper models.
+right patterns; even with cheaper models.
 
 ## Goals
 
@@ -23,7 +23,7 @@ and its own file/search tools. mcpsmithy adds the project-specific
 context layer the agent is otherwise missing.
 
 **Data sources:**
-- Local source code with `index: false` — provides structure only
+- Local source code with `index: false`; provides structure only
 - Local docs indexed for ranked search
 
 **Conventions:** Map file-path globs to docs and rules. Use `relations`
@@ -31,8 +31,8 @@ to link conventions together so cross-cutting concerns (e.g. changing
 an API also requires an integration test) are surfaced automatically.
 
 **Tools needed:**
-- `find_convention` — returns the docs, convention rules, and workflows that apply to a file path
-- `search` — ranked search across all indexed sources; conventions are surfaced first so the agent gets relevant context it might not know to ask for
+- `find_convention`: returns the docs, convention rules, and workflows that apply to a file path
+- `search`: ranked search across all indexed sources; conventions are surfaced first so the agent gets relevant context it might not know to ask for
 
 For full YAML examples of each source type, tool template, and convention pattern, see the [config reference](../../reference/config/README.md).
 

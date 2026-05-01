@@ -34,7 +34,7 @@ func (descTestEnum) Values() []string {
 	return []string{string(descTestEnumFast), string(descTestEnumSlow)}
 }
 
-// descTestToken is a named non-enum string type — for SchemaDoc.Types coverage.
+// descTestToken is a named non-enum string type; for SchemaDoc.Types coverage.
 type descTestToken string
 
 // descTokenHolder is a root config with a single named-string field.
