@@ -71,7 +71,7 @@ func (p ParamType) Compatible(v any) error {
 		}
 	case p == ParamTypeNumber:
 		switch v.(type) {
-		case int, float64: // ok — YAML unmarshals whole numbers as int
+		case int, float64: // ok; YAML unmarshals whole numbers as int
 		default:
 			return fmt.Errorf("expected number, got %T(%v)", v, v)
 		}
@@ -87,8 +87,7 @@ func (p ParamType) Compatible(v any) error {
 	return nil
 }
 
-// ZeroForParamType returns a type-appropriate zero value for template
-// validation dry-runs.
+// ZeroForParamType returns a type-appropriate zero value for template validation dry-runs.
 func ZeroForParamType(pt ParamType) any {
 	switch pt {
 	case ParamTypeNumber:

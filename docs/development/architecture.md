@@ -10,19 +10,19 @@ AI coding assistants can discover and invoke them.
 
 ## Design Principles
 
-1. **Zero per-project code** — All behaviour is declared in YAML.
-2. **Minimal dependencies** — stdlib-first; keep external modules
+1. **Zero per-project code.** All behaviour is declared in YAML.
+2. **Minimal dependencies**; stdlib-first; keep external modules
    to the bare minimum to reduce supply-chain risk and keep builds fast.
-3. **Security by default** — Read-only by design, sandbox path
-   validation, output caps. No shell execution — all tools are
+3. **Security by default.** Read-only by design, sandbox path
+   validation, output caps. No shell execution; all tools are
    inherently read-only.
-4. **Everything internal** — Protocol types, config, engine, server
-   all live under `internal/`. There is no public Go API — this is a
+4. **Everything internal.** Protocol types, config, engine, server
+   all live under `internal/`. There is no public Go API; this is a
    standalone binary.
 
 ## Package Dependencies
 
-Dependencies flow in one direction — leaf packages know nothing about
+Dependencies flow in one direction; leaf packages know nothing about
 the packages that import them.
 
 ## Data Flow
@@ -80,11 +80,11 @@ Both indexes use real term frequency, English stop-word removal,
 and suffix stemming to improve search quality. The lifecycle has
 two phases:
 
-1. **Pull** — Fetch external content (HTTP archive download or
+1. **Pull.** Fetch external content (HTTP archive download or
    `git clone`, HTTP scrape) and write the raw source files to
    `.mcpsmithy/`. Local files need no fetching.
-   Conventions require no fetching — they are built from config.
-2. **Serve** — Start the transport immediately; each source
+   Conventions require no fetching; they are built from config.
+2. **Serve.** Start the transport immediately; each source
    fetches, chunks, and merges into the source index
    concurrently. The convention index is built synchronously
    from config at startup. Local sources and conventions are
@@ -96,10 +96,10 @@ two phases:
 `.md`/`.markdown`/`.mdx` files are split into chunks at ATX heading
 boundaries (`# `, `## `, …). Two details worth knowing:
 
-- **Frontmatter stripping** — YAML frontmatter (`---…---` at the start
+- **Frontmatter stripping.** YAML frontmatter (`---…---` at the start
   of a file) is stripped before splitting, so key-value metadata never
   pollutes BM25 term scores.
-- **Heading breadcrumb** — Each chunk's `Section` field carries the
+- **Heading breadcrumb.** Each chunk's `Section` field carries the
   full ancestor hierarchy, e.g. `"Feature X > Installation"`. This
   makes parent heading terms available to BM25 scoring on every
   descendant chunk without changing chunk boundaries.
@@ -108,10 +108,10 @@ All other file types are indexed as a single chunk (whole-file).
 Scraped HTML is converted to Markdown before chunking, so it also
 benefits from heading-based splitting.
 
-Git sources shell out to the local `git` binary to clone repositories; credentials come from SSH keys, credential helpers, or `~/.netrc`. HTTP sources download tarballs or other files over HTTP(S) using `~/.netrc` or custom headers — use these when you want archive downloads without requiring the `git` binary. The `pullPolicy` field controls when fetching runs at startup; it governs source fetching only — the index is always rebuilt in-memory from local source files regardless of policy. See the config reference for field semantics.
+Git sources shell out to the local `git` binary to clone repositories; credentials come from SSH keys, credential helpers, or `~/.netrc`. HTTP sources download tarballs or other files over HTTP(S) using `~/.netrc` or custom headers; use these when you want archive downloads without requiring the `git` binary. The `pullPolicy` field controls when fetching runs at startup; it governs source fetching only; the index is always rebuilt in-memory from local source files regardless of policy. See the config reference for field semantics.
 
 The `sources pull` CLI command always re-fetches all sources regardless
-of policy — it is the explicit "refresh now" action useful for Docker
+of policy; it is the explicit "refresh now" action useful for Docker
 build-time pre-population of `.mcpsmithy/`.
 
 Local sources are always read from disk at index build time (they
@@ -123,20 +123,20 @@ The stdio transport is effectively sequential: one goroutine reads requests and
 the dispatch loop handles them one at a time. `writeResponse` holds a mutex to
 guard against any future concurrent writes.
 
-The HTTP transport is concurrent by Go's `net/http` design — each incoming
+The HTTP transport is concurrent by Go's `net/http` design; each incoming
 request is handled in its own goroutine. Responses are serialized back to the
 correct SSE stream via a per-session buffered channel, so each client's stream
 is coherent even under concurrent load.
 
 ## Error Handling
 
-- **Config errors** — Fatal at startup; the server won't start with
+- **Config errors.** Fatal at startup; the server won't start with
   a broken config.
-- **Tool execution errors** — Returned as `ToolResult` with
+- **Tool execution errors.** Returned as `ToolResult` with
   `isError: true`, not as JSON-RPC errors. This lets the AI see what
   went wrong.
-- **Protocol errors** — Returned as JSON-RPC error responses with
+- **Protocol errors.** Returned as JSON-RPC error responses with
   standard codes (-32700 parse error, -32601 method not found,
   -32602 invalid params).
-- **Unknown methods** — Notifications are silently dropped; requests
+- **Unknown methods.** Notifications are silently dropped; requests
   get a `-32601 Method Not Found` error.

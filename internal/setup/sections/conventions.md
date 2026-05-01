@@ -9,7 +9,7 @@ Conventions should map to tasks an engineer performs, not mirror the
 directory tree. Ask: "What would someone search for?"
 
 ```yaml
-# Bad — mirrors the package tree
+# Bad; mirrors the package tree
 server:
   scope: "internal/server/**"
   description: "MCP protocol server implementation."
@@ -17,11 +17,11 @@ config:
   scope: "internal/config/**"
   description: "Config loading and validation."
 
-# Good — task-oriented
+# Good; task-oriented
 config-schema:
   scope: "internal/config/**"
   description: |
-    Versioned YAML config with strict parsing — unknown keys are errors.
+    Versioned YAML config with strict parsing; unknown keys are errors.
     Adding a new config field:
       1. Add to the types in the latest config version
       2. Add a default if needed
@@ -39,15 +39,15 @@ tool-engine:
 ### Describe Workflows, Not Inventories
 
 The AI can read code to see what files exist. Conventions should
-describe **what to do** — checklists for common tasks, the order of
+describe **what to do**; checklists for common tasks, the order of
 operations, which files to touch and why.
 
 ```yaml
-# Bad — the AI already knows this from reading the code
+# Bad; the AI already knows this from reading the code
 description: >-
   server.go: read-dispatch-write loop. types.go: JSON-RPC types.
 
-# Good — tells the agent what to do
+# Good; tells the agent what to do
 description: |
   Tool execution, template rendering, and sandbox.
   Adding a new template function:
@@ -59,17 +59,17 @@ description: |
 
 ### Point to Docs, Don't Restate Them
 
-If rules already live in a doc file, reference them — don't duplicate
+If rules already live in a doc file, reference them; don't duplicate
 them in the description. Duplication means maintaining rules in two
 places; they'll drift.
 
 ```yaml
-# Bad — restates what's in testing.md
+# Bad; restates what's in testing.md
 description: |
   Tests use stdlib table-driven style with t.Run sub-tests.
   Use t.Helper() on shared assertion functions.
 
-# Good — points to the source of truth
+# Good; points to the source of truth
 description: |
   This project has coding and testing conventions.
   Read the docs before writing or modifying code.
@@ -88,18 +88,18 @@ Descriptions that name specific types, leaf file paths, or internal
 functions create maintenance traps. When those internals change, the
 convention becomes a source of wrong advice.
 
-Use intent-based language — describe *what* to find, not the exact
+Use intent-based language; describe *what* to find, not the exact
 symbol name. The AI can locate the current implementation.
 
 ```yaml
-# Brittle — renames or refactors break these references
+# Brittle; renames or refactors break these references
 description: |
   Adding a new config field:
     1. Add the field to config/v1/types.go
     2. Update applyDefaults() in config/v1/helpers.go
     3. Add validation in config/v1/validate.go
 
-# Stable — says what to do without pinning to symbols
+# Stable; says what to do without pinning to symbols
 description: |
   Adding a new config field:
     1. Add to the types in the latest config version
@@ -108,7 +108,7 @@ description: |
 ```
 
 **Workflow steps vs. symbol references.** Naming files as steps in a
-workflow is fine — "implement in templating.go, test in
+workflow is fine; "implement in templating.go, test in
 templating_test.go". What drifts is pinning to internal symbols:
 struct names, function signatures, internal constants. The AI can
 find the current struct name; it can't recover from trusting a
@@ -146,13 +146,13 @@ drop the reference unless it contains information specific to that
 convention's workflows.
 
 ```yaml
-# Noisy — architecture.md on everything
+# Noisy; architecture.md on everything
 server:
   docs: ["docs/development/architecture.md"]
 config:
   docs: ["docs/development/config.md", "docs/development/architecture.md"]
 
-# Targeted — only docs that help with this convention's tasks
+# Targeted; only docs that help with this convention's tasks
 config-schema:
   docs: ["docs/development/config.md"]
 code-style:
@@ -175,7 +175,7 @@ from one context to related contexts.
 
 When a config pulls in multiple sources spanning different systems,
 conventions are the right place to capture how those systems relate.
-No amount of code reading can produce operational topology — it
+No amount of code reading can produce operational topology; it
 lives in the team's understanding.
 
 ```yaml

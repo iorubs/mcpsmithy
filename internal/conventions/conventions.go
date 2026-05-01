@@ -104,7 +104,7 @@ func scopeTags(scope string) []string {
 }
 
 // ForPath returns conventions from the given map that match path.
-// Conventions with no scope are skipped — they are search-only.
+// Conventions with no scope are skipped; they are search-only.
 // Scopes support glob patterns: ** matches any depth, * matches within a
 // single path segment, and a bare * matches any path.
 func ForPath(conventions map[string]config.Convention, path string) []config.Convention {

@@ -3,7 +3,7 @@
 ## Overview
 
 mcpsmithy is a config-driven MCP tool server written in Go. All
-tool behaviour is declared in YAML — the binary contains no
+tool behaviour is declared in YAML; the binary contains no
 project-specific logic. See the project [README](../../README.md) for
 user-facing documentation.
 
@@ -22,23 +22,23 @@ user-facing documentation.
 
 The project follows a **stdlib-first** approach.
 
-**Go extended standard library (`golang.org/x`)** — maintained by the
+**Go extended standard library (`golang.org/x`)**; maintained by the
 Go team under the same review standards as the stdlib. Low risk; the
 main consideration is binary size.
 
-- `golang.org/x/net` — HTML tokenizer/parser used by the scrape
+- `golang.org/x/net`: HTML tokenizer/parser used by the scrape
   source to convert fetched pages into Markdown.
 
-**Third-party** — each addition should be justified by significant
+**Third-party**; each addition should be justified by significant
 value over a stdlib solution, and vetted for maintenance status,
 transitive dependencies, and API stability.
 
-- `github.com/alecthomas/kong` — CLI parsing. Provides declarative
+- `github.com/alecthomas/kong`: CLI parsing. Provides declarative
   struct-tag-based argument definitions with no runtime dependencies.
-  Revisit once the CLI surface stabilises — replacing with stdlib
+  Revisit once the CLI surface stabilises; replacing with stdlib
   `flag` is straightforward but premature while commands are still
   evolving.
-- `go.yaml.in/yaml/v4` — YAML config parsing. Maintained by the
+- `go.yaml.in/yaml/v4`: YAML config parsing. Maintained by the
   YAML spec maintainers with zero transitive dependencies.
 
 Avoid adding dependencies unless they provide significant value over a
@@ -48,18 +48,18 @@ stdlib solution.
 
 Follow standard Go naming conventions throughout the codebase:
 
-- **Packages** — Short, lowercase, single-word names. The package
+- **Packages.** Short, lowercase, single-word names. The package
   name should describe what it provides, not what it contains.
-- **Exported identifiers** — Use `MixedCaps`. Exports should form the
+- **Exported identifiers.** Use `MixedCaps`. Exports should form the
   public API of the package; keep it small and intentional.
-- **Unexported identifiers** — Use `mixedCaps`. Prefer short names
+- **Unexported identifiers.** Use `mixedCaps`. Prefer short names
   for local variables with small scopes.
-- **Interfaces** — Name after the behaviour they describe, not the
+- **Interfaces.** Name after the behaviour they describe, not the
   implementation. Single-method interfaces use the method name plus
   `-er` suffix when it reads naturally.
-- **Files** — Use `snake_case.go`. Test files use `_test.go` suffix.
+- **Files.** Use `snake_case.go`. Test files use `_test.go` suffix.
   Keep one primary type or concept per file.
-- **Acronyms** — Use consistent casing: `ID`, `URL`, `HTTP`, not
+- **Acronyms.** Use consistent casing: `ID`, `URL`, `HTTP`, not
   `Id`, `Url`, `Http`.
 
 ## Comment Conventions
@@ -67,15 +67,15 @@ Follow standard Go naming conventions throughout the codebase:
 Only add comments when they provide meaningful value beyond the code
 itself. Specifically:
 
-- **Package comments** — Every package should have a `// Package ...`
+- **Package comments.** Every package should have a `// Package ...`
   comment on the primary file, describing the package's purpose.
-- **Exported symbols** — Document all exported types, functions, and
+- **Exported symbols.** Document all exported types, functions, and
   methods with a `// Name ...` comment that explains what and why,
   not how.
-- **Non-obvious logic** — Comment complex algorithms, non-trivial
+- **Non-obvious logic.** Comment complex algorithms, non-trivial
   design decisions, or workarounds. If the next reader would need
   to stop and reason about the code, a comment helps.
-- **Skip the obvious** — Do not comment trivial getters, setters,
+- **Skip the obvious.** Do not comment trivial getters, setters,
   or straightforward control flow. The code is the documentation.
 
 ## Logs and Output
@@ -123,8 +123,8 @@ specific problem.**
 
 Error messages follow a consistent style:
 
-- **Start with lowercase** — Go convention.
-- **Lead with the operation, then the cause** — Use a colon separator when wrapping.
+- **Start with lowercase.** Go convention.
+- **Lead with the operation, then the cause.** Use a colon separator when wrapping.
 - **Be specific about what went wrong**, not prescriptive about how to fix it.
-- **Include context for wrapped errors** — Include the struct/tool/function involved.
-- **Wrap only when it adds value** — If the error already identifies the operation and location clearly, return it as-is. Redundant wrapping (e.g. `"reading file: %w"` when the underlying error already says which file) adds noise without aiding diagnosis.
+- **Include context for wrapped errors.** Include the struct/tool/function involved.
+- **Wrap only when it adds value.** If the error already identifies the operation and location clearly, return it as-is. Redundant wrapping (e.g. `"reading file: %w"` when the underlying error already says which file) adds noise without aiding diagnosis.

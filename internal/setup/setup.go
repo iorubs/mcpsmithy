@@ -112,7 +112,7 @@ func readSection(name string) (string, error) {
 }
 
 // fieldRefTmpl produces a plain-text field reference from a SchemaDoc.
-// The output is structured for LLM consumption — no fancy markdown tables,
+// The output is structured for LLM consumption; no fancy markdown tables,
 // just clear headings and field listings.
 var fieldRefTmpl = template.Must(template.New("fieldref").Parse(`
 {{- range .Structs}}

@@ -13,8 +13,7 @@ func base64Encode(s string) string {
 }
 
 func TestApplyNetrcAuth(t *testing.T) {
-	// Write a temp .netrc so netrcLookup finds credentials without touching the
-	// real home directory.
+	// Write a temp .netrc so netrcLookup finds credentials without touching the real home directory.
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 

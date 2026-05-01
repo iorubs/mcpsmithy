@@ -257,7 +257,7 @@ func TestHTTPMultiClientIsolation(t *testing.T) {
 	case data := <-linesB:
 		t.Fatalf("client B received response meant for A: %s", data)
 	case <-time.After(200 * time.Millisecond):
-		// Expected — no cross-talk.
+		// Expected; no cross-talk.
 	}
 }
 

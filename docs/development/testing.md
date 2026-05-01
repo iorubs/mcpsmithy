@@ -2,7 +2,7 @@
 
 ## Approach
 
-Tests use the Go standard `testing` package exclusively — no
+Tests use the Go standard `testing` package exclusively; no
 third-party test frameworks or assertion libraries. This keeps the
 test toolchain identical to the production toolchain.
 

@@ -35,7 +35,7 @@ func TestScopeTags(t *testing.T) {
 func TestBuildIndex(t *testing.T) {
 	convs := map[string]config.Convention{
 		"style":    {Scope: "*", Description: "Code style rules", Docs: []config.DocRef{{Source: "docs", Paths: []string{"docs/style.md"}}}},
-		"no-scope": {Description: "Search only — no scope"},
+		"no-scope": {Description: "Search only, no scope"},
 		"api":      {Scope: "api/**", Description: "API conventions", Tags: []string{"api"}},
 		"tooling":  {Scope: "internal/tools/**", Description: "Tool engine conventions"},
 	}
@@ -65,7 +65,7 @@ func TestForPath(t *testing.T) {
 	convs := map[string]config.Convention{
 		"global":      {Scope: "*", Description: "Universal"},
 		"controllers": {Scope: "internal/controller/**", Description: "Controllers"},
-		"search-only": {Description: "No scope — search only"},
+		"search-only": {Description: "No scope, search only"},
 		"api":         {Scope: "api/**", Description: "API types"},
 	}
 
@@ -88,7 +88,7 @@ func TestForPath(t *testing.T) {
 			"controller path matches global and controllers, not api or search-only",
 			"internal/controller/foo.go",
 			[]string{"Universal", "Controllers"},
-			[]string{"API types", "No scope — search only"},
+			[]string{"API types", "No scope, search only"},
 		},
 		{
 			"api path matches global and api, not controllers",

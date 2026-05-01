@@ -61,8 +61,7 @@ type mcpsmithyContext struct {
 }
 
 // Source returns a human-readable description of a named source,
-// falling through Local → Git → Scrape. This replaces the former
-// sources_for built-in function.
+// falling through Local → Git → Scrape. This replaces the former sources_for built-in function.
 func (c mcpsmithyContext) Source(name string) string {
 	if c.sources == nil {
 		return "No sources configured."
@@ -73,7 +72,7 @@ func (c mcpsmithyContext) Source(name string) string {
 	if src, ok := c.sources.Git[name]; ok {
 		line := src.Repo
 		if len(src.Paths) > 0 {
-			line += " — " + strings.Join(src.Paths, ", ")
+			line += "; " + strings.Join(src.Paths, ", ")
 		}
 		return line
 	}
@@ -259,8 +258,8 @@ func (e *templateEngine) funcMap(opts map[string]any) template.FuncMap {
 }
 
 // searchFor implements the search_for template function.
-// It queries two separate indexes — conventions first, then source
-// docs — so that conventions are always surfaced prominently.
+// It queries two separate indexes; conventions first, then source
+// docs; so that conventions are always surfaced prominently.
 //
 // maxResults controls how many results are returned per search.
 // maxResultSize controls the preview character limit for source doc results.
@@ -289,7 +288,7 @@ func (e *templateEngine) searchFor(query string, maxResults, maxResultSize int) 
 				if len(r.Chunk.Tags) > 0 {
 					sb.WriteString(fmt.Sprintf("   Tags: %s\n", strings.Join(r.Chunk.Tags, ", ")))
 				}
-				// Conventions are short by design — always show the full body.
+				// Conventions are short by design; always show the full body.
 				if r.Chunk.Body != "" {
 					sb.WriteString(fmt.Sprintf("   %s\n", r.Chunk.Body))
 				}
@@ -363,8 +362,7 @@ func (e *templateEngine) searchFor(query string, maxResults, maxResultSize int) 
 
 // fileRead implements the file_read template function.
 // It resolves a glob pattern against the sandbox filesystem, reads
-// matching files (up to maxFileSize KB each), and returns their
-// concatenated contents with headers.
+// matching files (up to maxFileSize KB each), and returns their concatenated contents with headers.
 //
 // maxFileSizeArg is set via tool options by the config author (KB).
 func (e *templateEngine) fileRead(pathGlob string, maxKB int) string {
@@ -413,7 +411,7 @@ func (e *templateEngine) fileRead(pathGlob string, maxKB int) string {
 
 // httpFetch performs an authenticated HTTP GET, strips ANSI codes, and
 // returns the body as a string. Applies .netrc credentials automatically.
-// Redirects are never followed — a 3xx response is returned as an error
+// Redirects are never followed; a 3xx response is returned as an error
 // that includes the redirect destination from the Location header.
 // When allowedHosts is non-nil the request URL must match one of the
 // entries; otherwise the call is rejected before any network I/O.
@@ -434,7 +432,7 @@ func httpFetch(ctx context.Context, rawURL string, maxRead int64, allowedHosts m
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		if location != "" {
-			return "", fmt.Errorf("%s redirected to %s (%s) — update the URL", rawURL, location, resp.Status)
+			return "", fmt.Errorf("%s redirected to %s (%s); update the URL", rawURL, location, resp.Status)
 		}
 		return "", fmt.Errorf("%s returned %s", rawURL, resp.Status)
 	}
@@ -471,7 +469,7 @@ func httpSend(ctx context.Context, method, rawURL, body, contentType string, max
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		if location != "" {
-			return "", fmt.Errorf("%s redirected to %s (%s) — update the URL", rawURL, location, resp.Status)
+			return "", fmt.Errorf("%s redirected to %s (%s); update the URL", rawURL, location, resp.Status)
 		}
 		return "", fmt.Errorf("%s returned %s", rawURL, resp.Status)
 	}

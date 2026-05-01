@@ -15,13 +15,13 @@ manually.
 
 - Docs are searchable and surfaced by relevance
 - Docs are navigable by topic via a convention graph
-- No custom server code — one YAML file, Docker, done
+- No custom server code; one YAML file, Docker, done
 - Works for local Markdown and external/hosted docs sites
 
 ## Technical overview
 
 **Deployment:** HTTP/SSE. The agent has no filesystem access to the
-docs — every tool exposed by mcpsmithy is its only way to discover,
+docs; every tool exposed by mcpsmithy is its only way to discover,
 search, and read content.
 
 **Data sources:**
@@ -34,13 +34,13 @@ overview to features to API reference by following the graph, rather
 than needing to know the structure upfront.
 
 **Reading docs:** `read_doc` lets the agent fetch a specific file
-directly once it knows what it's looking for — typically after
+directly once it knows what it's looking for; typically after
 `get_convention` or `search` has pointed it at the right location.
 
 **Tools needed:**
-- `get_convention` — fetches a convention by ID; returns its content and related sections
-- `search` — ranked search across all indexed sources; conventions are surfaced first — use this to build tools that surface the right docs automatically without the agent needing to know the structure upfront
-- `read_doc` — reads a specific doc file
+- `get_convention`: fetches a convention by ID; returns its content and related sections
+- `search`: ranked search across all indexed sources; conventions are surfaced first; use this to build tools that surface the right docs automatically without the agent needing to know the structure upfront
+- `read_doc`: reads a specific doc file
 
 For full YAML examples of each source type, tool template, and convention pattern, see the [config reference](../../reference/config/README.md).
 

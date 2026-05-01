@@ -6,13 +6,13 @@ them well.
 
 ### Templates
 
-Every tool requires a `template:` field — a Go `text/template`
+Every tool requires a `template:` field; a Go `text/template`
 string. Templates can call built-in functions and access the project context via `{{ .mcpsmithy }}`. Params and options are accessible as `{{ .paramName }}`.
 
 
 ### Let Descriptions Teach
 
-Tool descriptions appear in `tools/list` — the agent reads them
+Tool descriptions appear in `tools/list`; the agent reads them
 every session. Write descriptions that say **when** and **why** to
 call each tool, not just what it returns. "Returns project info" is
 weak. "Returns project overview and file structure. Call at the start
@@ -44,7 +44,7 @@ The description spells out the exact format. Without these hints,
 cheaper models may pass the browser URL directly and blame
 authentication when the request fails.
 
-This applies broadly — whenever the template expects a value in a
+This applies broadly; whenever the template expects a value in a
 different format than what the user naturally provides, encode that
 in the param name and description.
 
@@ -58,7 +58,7 @@ restrict which hosts the HTTP functions can reach.
 
 The AI knows `go test` and `npm run build`. What it doesn't know is
 your project's rules. A `project_commands` template tool should
-encode **how the AI should operate** — commands plus behavioral
+encode **how the AI should operate**; commands plus behavioral
 rules like "always run tests with -cover" or "do not use sed for
 file edits."
 
@@ -78,7 +78,7 @@ so one call gives both the rules and relevant content.
 
 The AI can already read local files with its editor tools. Use
 `file_read` in templates only for content the AI cannot access
-directly — files outside the workspace or generated content.
+directly; files outside the workspace or generated content.
 
 ### HTTP Authentication
 
@@ -87,9 +87,9 @@ via `~/.netrc`. The password field is sent as a Bearer token.
 
 ### Tool Sets by Use Case
 
-- **Docs Assistant** — `get_convention`, `search`, `read_doc`
-- **Project Awareness** — `find_convention`, `search`
-- **Support & Troubleshooting** — `project_info`, `find_convention`, `search`, `ci_log`
-- **Agentic Application** — `search`, `find_convention`, `api_read`, `api_create`, `api_update`
+- **Docs Assistant.** `get_convention`, `search`, `read_doc`
+- **Project Awareness.** `find_convention`, `search`
+- **Support & Troubleshooting.** `project_info`, `find_convention`, `search`, `ci_log`
+- **Agentic Application.** `search`, `find_convention`, `api_read`, `api_create`, `api_update`
 
 Full YAML examples for each deployment mode are below.

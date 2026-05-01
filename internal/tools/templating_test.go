@@ -579,7 +579,7 @@ func TestHTTPFetchAllowList(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// Allowed host — should succeed.
+	// Allowed host; should succeed.
 	allowed := map[string]bool{ts.URL: true}
 	body, err := httpFetch(context.Background(), ts.URL+"/path", 1024, allowed)
 	if err != nil {
@@ -589,7 +589,7 @@ func TestHTTPFetchAllowList(t *testing.T) {
 		t.Fatalf("expected %q, got %q", "ok", body)
 	}
 
-	// Blocked host — should fail before any network I/O.
+	// Blocked host; should fail before any network I/O.
 	blocked := map[string]bool{"https://other.example.com": true}
 	_, err = httpFetch(context.Background(), ts.URL+"/path", 1024, blocked)
 	if err == nil {
@@ -606,7 +606,7 @@ func TestHTTPSendAllowList(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// Allowed host — should succeed.
+	// Allowed host; should succeed.
 	allowed := map[string]bool{ts.URL: true}
 	body, err := httpSend(context.Background(), http.MethodPost, ts.URL, "{}", "application/json", 1024, allowed)
 	if err != nil {
@@ -616,7 +616,7 @@ func TestHTTPSendAllowList(t *testing.T) {
 		t.Fatalf("expected %q, got %q", "ok", body)
 	}
 
-	// Blocked host — should fail before any network I/O.
+	// Blocked host; should fail before any network I/O.
 	blocked := map[string]bool{"https://other.example.com": true}
 	_, err = httpSend(context.Background(), http.MethodPost, ts.URL, "{}", "application/json", 1024, blocked)
 	if err == nil {

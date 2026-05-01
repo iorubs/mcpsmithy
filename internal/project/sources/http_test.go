@@ -65,7 +65,7 @@ func TestExtractTarGz(t *testing.T) {
 }
 
 func TestExtractTarGz_PathTraversal(t *testing.T) {
-	// Attempt a path traversal — should be silently skipped.
+	// Attempt a path traversal; should be silently skipped.
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)

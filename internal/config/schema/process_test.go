@@ -91,7 +91,7 @@ type sampleWithMin struct {
 
 // oneofOptEntry has three fields across two oneof? groups.
 // enum conflicts with min (no_enum_with_min) and max (no_enum_with_max).
-// min and max share no group — they coexist freely.
+// min and max share no group; they coexist freely.
 type oneofOptEntry struct {
 	Enum []any    `yaml:"enum,omitempty"  mcpsmithy:"oneof?=no_enum_with_min|no_enum_with_max"`
 	Min  *float64 `yaml:"min,omitempty"   mcpsmithy:"oneof?=no_enum_with_min"`
@@ -102,7 +102,6 @@ type sampleWithOneOfOpt struct {
 	Constraints map[string]oneofOptEntry `yaml:"constraints,omitempty"`
 }
 
-// ── test type classifier (for typed-as= tests) ─────────────────────────────
 
 // typedAsConstraints mirrors a constraints struct for typed-as testing.
 type typedAsConstraints struct {
@@ -262,7 +261,7 @@ func TestProcess_EnumValidation(t *testing.T) {
 	}{
 		{"valid", &sampleWithEnums{Name: "ok", Policy: testEnumA}, 0, ""},
 		{"invalid", &sampleWithEnums{Name: "ok", Policy: "bad"}, 1, `policy: must be one of [alpha, beta], got "bad"`},
-		{"zero gets default — skipped", &sampleWithEnums{Name: "ok"}, 0, ""},
+		{"zero gets default; skipped", &sampleWithEnums{Name: "ok"}, 0, ""},
 		{"invalid in map", &sampleWithEnums{Name: "ok", Sources: map[string]enumHolder{
 			"a": {Policy: testEnumB}, "b": {Policy: "nope"},
 		}}, 1, `sources[b].policy: must be one of [alpha, beta], got "nope"`},
@@ -327,7 +326,7 @@ func TestProcess_Min(t *testing.T) {
 		wantMsg  string
 	}{
 		{"valid", &minEntry{MaxPages: 10}, 0, ""},
-		{"zero gets default 20 — valid", &minEntry{}, 0, ""},
+		{"zero gets default 20; valid", &minEntry{}, 0, ""},
 		{"below min", &minEntry{MaxPages: -1}, 1, "maxPages: must be >= 0, got -1"},
 		{"invalid in map", &sampleWithMin{Sources: map[string]minEntry{
 			"good": {MaxPages: 5}, "bad": {MaxPages: -2},
@@ -361,18 +360,18 @@ func TestProcess_OneOfOptional(t *testing.T) {
 		wantErrs int
 		wantMsg  string
 	}{
-		{"all empty — valid", &oneofOptEntry{}, 0, ""},
-		{"enum only — valid", &oneofOptEntry{Enum: []any{"a", "b"}}, 0, ""},
-		{"min only — valid", &oneofOptEntry{Min: f(1)}, 0, ""},
-		{"max only — valid", &oneofOptEntry{Max: f(100)}, 0, ""},
-		{"min+max — valid", &oneofOptEntry{Min: f(1), Max: f(100)}, 0, ""},
-		{"enum+min — error", &oneofOptEntry{Enum: []any{"a"}, Min: f(1)}, 1, "enum and min are mutually exclusive"},
-		{"enum+max — error", &oneofOptEntry{Enum: []any{"a"}, Max: f(100)}, 1, "enum and max are mutually exclusive"},
-		{"enum+min+max — two errors", &oneofOptEntry{Enum: []any{"a"}, Min: f(1), Max: f(100)}, 2, ""},
-		{"in map — valid", &sampleWithOneOfOpt{Constraints: map[string]oneofOptEntry{
+		{"all empty; valid", &oneofOptEntry{}, 0, ""},
+		{"enum only; valid", &oneofOptEntry{Enum: []any{"a", "b"}}, 0, ""},
+		{"min only; valid", &oneofOptEntry{Min: f(1)}, 0, ""},
+		{"max only; valid", &oneofOptEntry{Max: f(100)}, 0, ""},
+		{"min+max; valid", &oneofOptEntry{Min: f(1), Max: f(100)}, 0, ""},
+		{"enum+min; error", &oneofOptEntry{Enum: []any{"a"}, Min: f(1)}, 1, "enum and min are mutually exclusive"},
+		{"enum+max; error", &oneofOptEntry{Enum: []any{"a"}, Max: f(100)}, 1, "enum and max are mutually exclusive"},
+		{"enum+min+max; two errors", &oneofOptEntry{Enum: []any{"a"}, Min: f(1), Max: f(100)}, 2, ""},
+		{"in map; valid", &sampleWithOneOfOpt{Constraints: map[string]oneofOptEntry{
 			"ok": {Min: f(0), Max: f(10)},
 		}}, 0, ""},
-		{"in map — error", &sampleWithOneOfOpt{Constraints: map[string]oneofOptEntry{
+		{"in map; error", &sampleWithOneOfOpt{Constraints: map[string]oneofOptEntry{
 			"bad": {Enum: []any{"x"}, Min: f(0)},
 		}}, 1, ""},
 	}
@@ -400,7 +399,6 @@ func TestProcess_TypedAs(t *testing.T) {
 		wantErrs int
 		wantMsg  string
 	}{
-		// ── default type compatibility ──
 		{"valid string default", &sampleWithTypedAs{Params: []typedAsParam{
 			{Name: "q", Type: ParamTypeString, Default: "hello"},
 		}}, 0, ""},
@@ -419,7 +417,6 @@ func TestProcess_TypedAs(t *testing.T) {
 		{"int default for string", &sampleWithTypedAs{Params: []typedAsParam{
 			{Name: "q", Type: ParamTypeString, Default: 42},
 		}}, 1, "default"},
-		// ── constraints type compatibility ──
 		{"valid min/max on numeric", &sampleWithTypedAs{Params: []typedAsParam{
 			{Name: "n", Type: ParamTypeNumber, Constraints: &typedAsConstraints{Min: f(1), Max: f(100)}},
 		}}, 0, ""},
@@ -596,7 +593,7 @@ func TestProcess_LeafValidatorInterface(t *testing.T) {
 	}{
 		{"valid leaf", &sampleWithLeafValidator{Token: "good"}, 0, ""},
 		{"invalid leaf", &sampleWithLeafValidator{Token: "bad"}, 1, "leaf value is bad"},
-		{"zero leaf — required fires, Validate skipped", &sampleWithLeafValidator{}, 1, "token is required"},
+		{"zero leaf; required fires, Validate skipped", &sampleWithLeafValidator{}, 1, "token is required"},
 		{"nil", (*sampleWithLeafValidator)(nil), 0, ""},
 	}
 	for _, tt := range tests {

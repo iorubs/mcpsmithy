@@ -18,7 +18,7 @@ the details of each section you need.
 
 An AI assistant with MCP tools can read files, search code, and call
 the tools you define. Your config should provide **what the AI cannot
-figure out on its own** — project conventions, the *why* behind
+figure out on its own**; project conventions, the *why* behind
 decisions, and pointers to the right docs. Don't duplicate what's
 already in the filesystem.
 
@@ -27,12 +27,12 @@ already in the filesystem.
 `.mcpsmithy.yaml` defines what an MCP server exposes to an AI agent.
 It declares the project identity, coding conventions, tool definitions,
 and content sources. `mcpsmithy serve` reads this file and starts an
-MCP server — the agent connects and calls the tools you define.
+MCP server; the agent connects and calls the tools you define.
 
 ### How to Approach a New Config
 
-Understand before you write. Read the project — local files, README,
-existing docs — before declaring sources or conventions. For remote
+Understand before you write. Read the project; local files, README,
+existing docs; before declaring sources or conventions. For remote
 sources, pull them first and examine the fetched content before
 referencing it. Call `config_section` for each section when you are
 ready to write it.
@@ -58,7 +58,7 @@ machine basic.example.com
 
 - **Index or not?** Index docs and content the agent should search by
   content. Set `index: false` for source code and config files the
-  agent can already read directly — they provide structure only.
+  agent can already read directly; they provide structure only.
 
 - **Convention per package?** No. Consolidate around tasks an engineer
   performs. "How do I add a config field?" is a convention. "The config
@@ -66,7 +66,7 @@ machine basic.example.com
 
 - **What goes in `description` vs. docs?** Descriptions should say
   what to do and what rules exist. If detailed rules live in doc files,
-  point to them with `docs:` — don't restate them.
+  point to them with `docs:`; don't restate them.
 
 ### Minimal Working Example
 
@@ -113,7 +113,7 @@ signal. Its only job is to tell the AI that MCP tools exist and that
 using them is mandatory.
 
 Don't duplicate project structure, conventions, commands, or
-tool-specific instructions in that file — those are all discoverable
+tool-specific instructions in that file; those are all discoverable
 via the tools themselves. Don't hardcode tool names either; tool names
 may change. State the principle instead: *tools are mandatory, call
 them throughout the session*. The tool descriptions in
@@ -122,19 +122,19 @@ them throughout the session*. The tool descriptions in
 A better approach is to put the essential context in the `project`
 section of `.mcpsmithy.yaml` and surface it on demand via a `project_info`
 tool. The agent calls the tool at the start of a session and gets accurate,
-live context — no always-on injection needed. See the tools section for
+live context; no always-on injection needed. See the tools section for
 a complete `project_info` example.
 
 This keeps the persistent instruction file minimal (just "use the MCP
-tools") while the real project context lives where it belongs — in the
-config — and is fetched on demand.
+tools") while the real project context lives where it belongs; in the
+config; and is fetched on demand.
 
 ### Next Steps
 
 Call `config_section` for each section you need to write:
-- `config_section section=project` — project metadata, content sources, and remote source patterns
-- `config_section section=conventions` — convention definitions
-- `config_section section=tools` — tool definitions and built-in functions
+- `config_section section=project`: project metadata, content sources, and remote source patterns
+- `config_section section=conventions`: convention definitions
+- `config_section section=tools`: tool definitions and built-in functions
 
 
 ---
@@ -147,21 +147,21 @@ covers strategy.
 
 ### Setup Workflow
 
-1. **Examine local content** — read the directory tree, README, and
+1. **Examine local content**; read the directory tree, README, and
    any existing docs you can access directly. Understand the project
    structure before declaring sources.
 
-2. **Declare sources** — set `name` and `description`. Declare local
+2. **Declare sources**; set `name` and `description`. Declare local
    sources for source code, docs, tests, and config files. For remote
    sources (git, http, scrape), add a minimal entry with just the
-   required fields — enough to pull.
+   required fields; enough to pull.
 
-3. **Pull remote sources** — run `mcpsmithy sources pull`. This
+3. **Pull remote sources**; run `mcpsmithy sources pull`. This
    fetches remote content into `.mcpsmithy/` so you can examine it.
 
-4. **Examine remote content** — read the fetched files under
+4. **Examine remote content**; read the fetched files under
    `.mcpsmithy/`. Understand what each remote source actually
-   contains — its structure, doc topics, naming patterns — before
+   contains; its structure, doc topics, naming patterns; before
    writing conventions or tools that reference them.
 
 ### Keep the Description Relevant
@@ -177,7 +177,7 @@ separately.
 
 ### Git Authentication
 
-Git sources use your existing git credentials — SSH keys, credential
+Git sources use your existing git credentials; SSH keys, credential
 helpers, or HTTPS via `~/.netrc`.
 
 ### HTTP Source Authentication
@@ -298,7 +298,7 @@ Conventions should map to tasks an engineer performs, not mirror the
 directory tree. Ask: "What would someone search for?"
 
 ```yaml
-# Bad — mirrors the package tree
+# Bad; mirrors the package tree
 server:
   scope: "internal/server/**"
   description: "MCP protocol server implementation."
@@ -306,11 +306,11 @@ config:
   scope: "internal/config/**"
   description: "Config loading and validation."
 
-# Good — task-oriented
+# Good; task-oriented
 config-schema:
   scope: "internal/config/**"
   description: |
-    Versioned YAML config with strict parsing — unknown keys are errors.
+    Versioned YAML config with strict parsing; unknown keys are errors.
     Adding a new config field:
       1. Add to the types in the latest config version
       2. Add a default if needed
@@ -328,15 +328,15 @@ tool-engine:
 ### Describe Workflows, Not Inventories
 
 The AI can read code to see what files exist. Conventions should
-describe **what to do** — checklists for common tasks, the order of
+describe **what to do**; checklists for common tasks, the order of
 operations, which files to touch and why.
 
 ```yaml
-# Bad — the AI already knows this from reading the code
+# Bad; the AI already knows this from reading the code
 description: >-
   server.go: read-dispatch-write loop. types.go: JSON-RPC types.
 
-# Good — tells the agent what to do
+# Good; tells the agent what to do
 description: |
   Tool execution, template rendering, and sandbox.
   Adding a new template function:
@@ -348,17 +348,17 @@ description: |
 
 ### Point to Docs, Don't Restate Them
 
-If rules already live in a doc file, reference them — don't duplicate
+If rules already live in a doc file, reference them; don't duplicate
 them in the description. Duplication means maintaining rules in two
 places; they'll drift.
 
 ```yaml
-# Bad — restates what's in testing.md
+# Bad; restates what's in testing.md
 description: |
   Tests use stdlib table-driven style with t.Run sub-tests.
   Use t.Helper() on shared assertion functions.
 
-# Good — points to the source of truth
+# Good; points to the source of truth
 description: |
   This project has coding and testing conventions.
   Read the docs before writing or modifying code.
@@ -377,18 +377,18 @@ Descriptions that name specific types, leaf file paths, or internal
 functions create maintenance traps. When those internals change, the
 convention becomes a source of wrong advice.
 
-Use intent-based language — describe *what* to find, not the exact
+Use intent-based language; describe *what* to find, not the exact
 symbol name. The AI can locate the current implementation.
 
 ```yaml
-# Brittle — renames or refactors break these references
+# Brittle; renames or refactors break these references
 description: |
   Adding a new config field:
     1. Add the field to config/v1/types.go
     2. Update applyDefaults() in config/v1/helpers.go
     3. Add validation in config/v1/validate.go
 
-# Stable — says what to do without pinning to symbols
+# Stable; says what to do without pinning to symbols
 description: |
   Adding a new config field:
     1. Add to the types in the latest config version
@@ -397,7 +397,7 @@ description: |
 ```
 
 **Workflow steps vs. symbol references.** Naming files as steps in a
-workflow is fine — "implement in templating.go, test in
+workflow is fine; "implement in templating.go, test in
 templating_test.go". What drifts is pinning to internal symbols:
 struct names, function signatures, internal constants. The AI can
 find the current struct name; it can't recover from trusting a
@@ -435,13 +435,13 @@ drop the reference unless it contains information specific to that
 convention's workflows.
 
 ```yaml
-# Noisy — architecture.md on everything
+# Noisy; architecture.md on everything
 server:
   docs: ["docs/development/architecture.md"]
 config:
   docs: ["docs/development/config.md", "docs/development/architecture.md"]
 
-# Targeted — only docs that help with this convention's tasks
+# Targeted; only docs that help with this convention's tasks
 config-schema:
   docs: ["docs/development/config.md"]
 code-style:
@@ -464,7 +464,7 @@ from one context to related contexts.
 
 When a config pulls in multiple sources spanning different systems,
 conventions are the right place to capture how those systems relate.
-No amount of code reading can produce operational topology — it
+No amount of code reading can produce operational topology; it
 lives in the team's understanding.
 
 ```yaml
@@ -543,13 +543,13 @@ them well.
 
 ### Templates
 
-Every tool requires a `template:` field — a Go `text/template`
+Every tool requires a `template:` field; a Go `text/template`
 string. Templates can call built-in functions and access the project context via `{{ .mcpsmithy }}`. Params and options are accessible as `{{ .paramName }}`.
 
 
 ### Let Descriptions Teach
 
-Tool descriptions appear in `tools/list` — the agent reads them
+Tool descriptions appear in `tools/list`; the agent reads them
 every session. Write descriptions that say **when** and **why** to
 call each tool, not just what it returns. "Returns project info" is
 weak. "Returns project overview and file structure. Call at the start
@@ -581,7 +581,7 @@ The description spells out the exact format. Without these hints,
 cheaper models may pass the browser URL directly and blame
 authentication when the request fails.
 
-This applies broadly — whenever the template expects a value in a
+This applies broadly; whenever the template expects a value in a
 different format than what the user naturally provides, encode that
 in the param name and description.
 
@@ -595,7 +595,7 @@ restrict which hosts the HTTP functions can reach.
 
 The AI knows `go test` and `npm run build`. What it doesn't know is
 your project's rules. A `project_commands` template tool should
-encode **how the AI should operate** — commands plus behavioral
+encode **how the AI should operate**; commands plus behavioral
 rules like "always run tests with -cover" or "do not use sed for
 file edits."
 
@@ -615,7 +615,7 @@ so one call gives both the rules and relevant content.
 
 The AI can already read local files with its editor tools. Use
 `file_read` in templates only for content the AI cannot access
-directly — files outside the workspace or generated content.
+directly; files outside the workspace or generated content.
 
 ### HTTP Authentication
 
@@ -624,10 +624,10 @@ via `~/.netrc`. The password field is sent as a Bearer token.
 
 ### Tool Sets by Use Case
 
-- **Docs Assistant** — `get_convention`, `search`, `read_doc`
-- **Project Awareness** — `find_convention`, `search`
-- **Support & Troubleshooting** — `project_info`, `find_convention`, `search`, `ci_log`
-- **Agentic Application** — `search`, `find_convention`, `api_read`, `api_create`, `api_update`
+- **Docs Assistant.** `get_convention`, `search`, `read_doc`
+- **Project Awareness.** `find_convention`, `search`
+- **Support & Troubleshooting.** `project_info`, `find_convention`, `search`, `ci_log`
+- **Agentic Application.** `search`, `find_convention`, `api_read`, `api_create`, `api_update`
 
 Full YAML examples for each deployment mode are below.
 

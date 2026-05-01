@@ -38,7 +38,7 @@ func Process(v any) []error {
 			}
 		}
 
-		// 2. Required — nothing else to check on a zero value.
+		// 2. Required; nothing else to check on a zero value.
 		if isZero(fv) {
 			if info.Required {
 				errs = append(errs, errors.New(path+" is required"))
@@ -74,7 +74,7 @@ func Process(v any) []error {
 			}
 		}
 
-		// 7. Ref — value must appear as a key in at least one referenced map.
+		// 7. Ref; value must appear as a key in at least one referenced map.
 		if len(info.Refs) > 0 && fv.Kind() == reflect.String {
 			var validKeys []string
 			for _, refPath := range info.Refs {
@@ -91,8 +91,7 @@ func Process(v any) []error {
 	})
 
 	// Struct-level validation: oneof groups, typed-as constraints, and the
-	// validator interface. Combined into a single pass to avoid redundant
-	// tree traversals.
+	// validator interface. Combined into a single pass to avoid redundant tree traversals.
 	walkStructNodes(v, "", func(rv reflect.Value, path string) {
 		errs = append(errs, oneOfErrors(rv, path)...)
 		errs = append(errs, typedAsErrors(rv, path)...)
@@ -200,8 +199,6 @@ func resolveMapKeys(root reflect.Value, dotPath string) []string {
 	return keys
 }
 
-// ── Struct-level validators (oneof, typed-as) ─────────────────────────────────
-
 // oneOfErrors checks mutual-exclusivity groups within a single struct node rv.
 // Called once per struct node from Process's combined struct-level pass.
 //
@@ -222,10 +219,12 @@ func oneOfErrors(rv reflect.Value, structPath string) []error {
 
 	for i := 0; i < rt.NumField(); i++ {
 		field, fv := rt.Field(i), rv.Field(i)
-		// Skip struct containers the walker recurses into (struct, ptr-to-struct,
-		// map). Slices are NOT skipped: value slices (e.g. []any) are leaf values
-		// that can participate in oneof groups.
-		if isNestedStruct(fv) {
+		// Skip struct containers the walker recurses into (struct, map).
+		// Pointer-to-struct is NOT skipped: a nil pointer is a meaningful
+		// "unset" signal for oneof groups (typed-kind discriminators).
+		// Slices are NOT skipped: value slices (e.g. []any) are leaf
+		// values that can participate in oneof groups.
+		if isNestedStruct(fv) && fv.Kind() != reflect.Pointer {
 			continue
 		}
 		yamlName := yamlFieldName(field)
@@ -262,7 +261,7 @@ func oneOfErrors(rv reflect.Value, structPath string) []error {
 		}
 		switch len(setNames) {
 		case 1:
-			// exactly one — valid for both oneof and oneof?
+			// exactly one; valid for both oneof and oneof?
 		case 0:
 			if g.optional {
 				continue // at-most-one: zero set is fine
@@ -334,7 +333,7 @@ func checkAgainstTypeClassifier(fv reflect.Value, tc typeClassifier, path string
 
 	switch actual.Kind() {
 	case reflect.Interface:
-		// any / interface{} field — validate the Go type of the stored value.
+		// any / interface{} field; validate the Go type of the stored value.
 		if actual.IsNil() {
 			return nil
 		}

@@ -18,8 +18,8 @@ type tagInfo struct {
 	OneOfs      []oneOfEntry // all oneof/oneof? groups this field belongs to
 	Min         *int         // minimum value for int fields (nil when absent)
 	NotReserved bool         // value must not appear in ReservedContextKeys
-	Refs        []string     // ref=path1|path2 — value must appear in keys of at least one navigated map
-	TypedAs     string       // typed-as=fieldName — sibling field whose value (a TypeClassifier) governs type compatibility
+	Refs        []string     // ref=path1|path2; value must appear in keys of at least one navigated map
+	TypedAs     string       // typed-as=fieldName; sibling field whose value (a TypeClassifier) governs type compatibility
 }
 
 // parseTag parses the struct tag value.

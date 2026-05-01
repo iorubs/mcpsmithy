@@ -81,7 +81,7 @@ func TestBuildJSONSchema(t *testing.T) {
 			},
 		},
 		{
-			"min only — no maximum key",
+			"min only; no maximum key",
 			[]config.ToolParam{
 				{Name: "offset", Type: config.ParamTypeNumber, Constraints: &config.ParamConstraints{
 					Min: f64(0),
@@ -99,7 +99,7 @@ func TestBuildJSONSchema(t *testing.T) {
 			},
 		},
 		{
-			"no constraints — no enum/min/max keys",
+			"no constraints; no enum/min/max keys",
 			[]config.ToolParam{
 				{Name: "q", Type: config.ParamTypeString},
 			},
@@ -144,7 +144,7 @@ func TestBuildJSONSchema(t *testing.T) {
 			},
 		},
 		{
-			"nil default — no default key",
+			"nil default; no default key",
 			[]config.ToolParam{{Name: "q", Type: config.ParamTypeString}},
 			func(t *testing.T, s map[string]any) {
 				p := s["properties"].(map[string]any)["q"].(map[string]any)

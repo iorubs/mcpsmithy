@@ -7,8 +7,7 @@ import (
 
 // isNestedStruct reports whether fv is a struct, ptr-to-struct, or map —
 // i.e. a container the walker recurses into. Slices are excluded so that
-// value slices ([]any, []string, etc.) can participate in oneof groups as
-// leaf values.
+// value slices ([]any, []string, etc.) can participate in oneof groups as leaf values.
 func isNestedStruct(fv reflect.Value) bool {
 	switch fv.Kind() {
 	case reflect.Struct, reflect.Map:
@@ -69,6 +68,15 @@ func walk(rv reflect.Value, prefix string, onStruct func(reflect.Value, string),
 			continue
 		}
 		childPath := childPathFor(prefix, yamlName)
+		// Slice and map fields may carry tag info (e.g. required) that
+		// applies to the container itself; run onLeaf on the field value
+		// before recursing into its elements so the container-level directives are checked.
+		if onLeaf != nil && (fv.Kind() == reflect.Slice || fv.Kind() == reflect.Map) {
+			if raw := field.Tag.Get(tagName); raw != "" {
+				idx := i
+				onLeaf(fv, func(nv reflect.Value) { rv.Field(idx).Set(nv) }, parseTag(raw), childPath)
+			}
+		}
 		switch {
 		case fv.Kind() == reflect.Struct:
 			walk(fv, childPath, onStruct, onLeaf)
@@ -78,6 +86,22 @@ func walk(rv reflect.Value, prefix string, onStruct func(reflect.Value, string),
 			walkMap(fv, childPath, onStruct, onLeaf)
 		case fv.Kind() == reflect.Slice:
 			walkSlice(fv, childPath, onStruct, onLeaf)
+			// For slices of non-struct elements (e.g. []string, []Guard),
+			// run onLeaf on each element so per-element directives like
+			// ref= and enum membership checks fire.
+			if onLeaf != nil && fv.Len() > 0 {
+				elemType := fv.Type().Elem()
+				isElemStruct := elemType.Kind() == reflect.Struct ||
+					(elemType.Kind() == reflect.Pointer && elemType.Elem().Kind() == reflect.Struct)
+				if !isElemStruct {
+					info := parseTag(field.Tag.Get(tagName))
+					for j := 0; j < fv.Len(); j++ {
+						jj := j
+						slice := fv
+						onLeaf(slice.Index(j), func(nv reflect.Value) { slice.Index(jj).Set(nv) }, info, fmt.Sprintf("%s[%d]", childPath, j))
+					}
+				}
+			}
 		default:
 			if onLeaf == nil {
 				continue

@@ -32,8 +32,7 @@ type Source interface {
 	Read(globs []string, prefix string) ([]RawDoc, error)
 }
 
-// skipFetch returns true when the resolved pull policy says the source
-// should not be re-fetched.
+// skipFetch returns true when the resolved pull policy says the source should not be re-fetched.
 func skipFetch(policy config.PullPolicy, destDir string) bool {
 	switch policy {
 	case config.PullPolicyNever:
@@ -65,8 +64,7 @@ type SourceMeta struct {
 // Factory creates a Source and its metadata from kind-specific configuration.
 // name is the user-chosen label for the source entry.
 // raw is the kind-specific config struct (e.g. config.LocalSource for "local").
-// projectRoot is the workspace root; baseDir is the cache directory for
-// fetched remote sources.
+// projectRoot is the workspace root; baseDir is the cache directory for fetched remote sources.
 // global is the project-wide PullPolicy fallback.
 type Factory func(name string, raw any, projectRoot, baseDir string, global config.PullPolicy) (Source, SourceMeta, error)
 

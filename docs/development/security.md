@@ -3,12 +3,12 @@
 ## Threat Model
 
 mcpsmithy reads files and renders templates on behalf of an AI
-assistant. All tools are read-only by design — there is no
+assistant. All tools are read-only by design; there is no
 shell execution. The primary risks are:
 
-1. **Path traversal** — AI requests a file outside the project
-2. **Resource exhaustion** — Unbounded output from large file reads
-3. **Information disclosure** — AI reads sensitive files within the project
+1. **Path traversal.** AI requests a file outside the project
+2. **Resource exhaustion.** Unbounded output from large file reads
+3. **Information disclosure.** AI reads sensitive files within the project
 
 ## Mitigations
 
@@ -31,7 +31,7 @@ All file operations go through the sandbox. It:
 ### Read-Only by Design
 
 All tools are inherently read-only. There is no shell execution in tool
-handlers — the AI can discover and read project content but never mutate it.
+handlers; the AI can discover and read project content but never mutate it.
 
 > **Note:** `exec.CommandContext` is used for git clone during source fetching. This is not AI-triggerable;
 > fetching runs at server startup only. HTTP sources fetch over pure
@@ -49,10 +49,10 @@ protocol traffic. This prevents log injection into protocol messages.
 
 ## What Is NOT Mitigated
 
-- **Config trust** — The `.mcpsmithy.yaml` file is trusted. Anyone
+- **Config trust.** The `.mcpsmithy.yaml` file is trusted. Anyone
   who can modify it controls which files are exposed to the AI and
   what template logic runs.
-- **Sensitive file exposure** — File access is scoped by declared sources
+- **Sensitive file exposure.** File access is scoped by declared sources
   and the `project_file_path` parameter type, which restricts reads to
   paths within configured sources. This means the AI can only read files
   the config author explicitly exposed via source declarations. The config

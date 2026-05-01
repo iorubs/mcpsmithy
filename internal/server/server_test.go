@@ -137,7 +137,7 @@ func TestSwapEngineSendsToolsListChanged(t *testing.T) {
 	// Serve processes the ping, then hits EOF.
 	_ = srv.Serve(context.Background())
 
-	// Now swap the engine — should write a notification to stdout.
+	// Now swap the engine; should write a notification to stdout.
 	out.Reset()
 	eng2 := newTestEngine(t)
 	srv.SwapEngine(eng2)

@@ -25,11 +25,10 @@ import (
 const (
 	// ReservedContextKey is the single template context key owned by the
 	// engine. User params with this name collide with the injected config namespace.
-	// Canonical definition is in the schema package; this alias keeps
-	// the existing export path stable.
+	// Canonical definition is in the schema package; this alias keeps the existing export path stable.
 	ReservedContextKey = schema.ReservedContextKey
 
-	// Constant aliases — re-export values so consumers never import v1 directly.
+	// Constant aliases; re-export values so consumers never import v1 directly.
 	// PullPolicy values control when external sources are fetched.
 	PullPolicyAlways       = v1.PullPolicyAlways
 	PullPolicyIfNotPresent = v1.PullPolicyIfNotPresent
@@ -42,7 +41,7 @@ const (
 	ParamTypeArray           = v1.ParamTypeArray
 	ParamTypeProjectFilePath = v1.ParamTypeProjectFilePath
 
-	// BuiltinFunc names — the template functions available inside tool templates.
+	// BuiltinFunc names; the template functions available inside tool templates.
 	BuiltinFuncConventionsFor = v1.BuiltinFuncConventionsFor
 	BuiltinFuncSearchFor      = v1.BuiltinFuncSearchFor
 	BuiltinFuncFileRead       = v1.BuiltinFuncFileRead
@@ -70,7 +69,7 @@ type VersionSchema interface {
 // Callers that only need the latest version can use this directly.
 var TypesSources = v1.TypesSources
 
-// Type aliases — always point to the latest version.
+// Type aliases; always point to the latest version.
 type (
 	Config              = v1.Config
 	Project             = v1.Project

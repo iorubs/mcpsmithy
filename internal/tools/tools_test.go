@@ -283,7 +283,7 @@ func TestExecuteGrepWithFloat64Params(t *testing.T) {
 		},
 	}
 	eng := testEngine(t, cfg)
-	// before/after supplied as float64 — exactly what JSON unmarshalling produces.
+	// before/after supplied as float64; exactly what JSON unmarshalling produces.
 	out, err := eng.Execute(context.Background(), "ci_log", map[string]any{
 		"pattern": "TARGET",
 		"before":  float64(1),
