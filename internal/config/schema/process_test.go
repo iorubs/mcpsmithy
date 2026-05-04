@@ -102,7 +102,6 @@ type sampleWithOneOfOpt struct {
 	Constraints map[string]oneofOptEntry `yaml:"constraints,omitempty"`
 }
 
-
 // typedAsConstraints mirrors a constraints struct for typed-as testing.
 type typedAsConstraints struct {
 	Enum []any    `yaml:"enum,omitempty" mcpsmithy:"oneof?=no_enum_with_min|no_enum_with_max"`
