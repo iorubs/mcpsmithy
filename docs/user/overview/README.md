@@ -41,7 +41,7 @@ building custom servers or deciding for yourself what's relevant every time.
 | `tools`        | Tools defined as Go templates; call built-in functions or compose them into pipelines, all in config |
 
 The server speaks MCP over JSON-RPC 2.0. It uses stdio by default
-(the MCP client spawns the binary directly) or HTTP/SSE for Docker
+(the MCP client spawns the binary directly) or HTTP for Docker
 and remote deployments.
 
 ### Reference docs

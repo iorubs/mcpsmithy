@@ -1,16 +1,29 @@
-// Package server implements the MCP protocol handler.
+// Package server wires the mcpsmithy tool engine to the MCP SDK.
+//
+// The MCP framing (initialize, tools/list, tools/call, list-changed
+// notifications) and transports (stdio, Streamable HTTP) live in
+// github.com/modelcontextprotocol/go-sdk/mcp. This package owns the
+// bridge: turn each Engine tool into an mcp.Tool, decode arguments,
+// and pipe results back as CallToolResult.
 package server
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
-	"os"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/iorubs/mcpsmithy/internal/config"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+const (
+	serverName    = "mcpsmithy"
+	serverVersion = "0.1.0"
 )
 
 // Engine is the interface that tool engines must implement to be served
@@ -21,141 +34,142 @@ type Engine interface {
 	Execute(ctx context.Context, name string, params map[string]any) (string, error)
 }
 
-// Server processes MCP requests using the latest API version.
+// Server adapts an Engine to mcp.Server. It supports two transports:
+// stdio (default) and Streamable HTTP, selected via Option.
 type Server struct {
-	mu     sync.RWMutex
-	engine Engine
-	tp     Transport
+	mu         sync.Mutex
+	engine     Engine
+	mcp        *mcp.Server
+	registered map[string]struct{}
+	transport  mcp.Transport
+	httpAddr   string
 }
 
 // Option configures a Server.
 type Option func(*Server)
 
-// WithHTTP configures the server to use the HTTP/SSE transport bound to addr (e.g. ":8080").
+// WithHTTP configures the server to use Streamable HTTP bound to addr (e.g. ":8080").
 func WithHTTP(addr string) Option {
-	return func(s *Server) { s.tp = newHTTP(addr) }
+	return func(s *Server) {
+		s.transport = nil
+		s.httpAddr = addr
+	}
 }
 
-// New creates a server using the stdio transport (os.Stdin/os.Stdout by default).
+// New creates a server using the stdio transport by default.
 func New(eng Engine, opts ...Option) *Server {
-	s := &Server{engine: eng, tp: newStdio(os.Stdin, os.Stdout)}
+	s := &Server{
+		engine:     eng,
+		registered: make(map[string]struct{}),
+		transport:  &mcp.StdioTransport{},
+	}
 	for _, o := range opts {
 		o(s)
 	}
+	s.mcp = mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, nil)
+	s.registerToolsLocked(eng)
 	return s
 }
 
-// SwapEngine atomically replaces the running engine and notifies
-// connected clients that the tool list has changed.
+// SwapEngine atomically replaces the running engine. Adding/removing
+// tools triggers tools/list_changed notifications via the SDK.
 func (s *Server) SwapEngine(eng Engine) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(s.registered) > 0 {
+		names := make([]string, 0, len(s.registered))
+		for n := range s.registered {
+			names = append(names, n)
+		}
+		s.mcp.RemoveTools(names...)
+	}
+	s.registered = make(map[string]struct{})
 	s.engine = eng
-	s.mu.Unlock()
-
-	if err := s.tp.Notify(methodToolsListChanged); err != nil {
-		slog.Warn("failed to send tools/list_changed notification", "error", err)
-	}
+	s.registerToolsLocked(eng)
 }
 
-// Serve starts the transport loop until the context is cancelled or the
-// underlying connection closes.
+// Serve starts the configured transport and blocks until ctx is
+// cancelled or the underlying connection closes.
 func (s *Server) Serve(ctx context.Context) error {
-	slog.InfoContext(ctx, "MCP server starting", "protocol", protocolVersion)
-	return s.tp.Serve(ctx, s.handle)
-}
-
-func (s *Server) handle(ctx context.Context, req *request) *response {
-	switch req.Method {
-	case methodInitialize:
-		return s.initialize(ctx, req)
-	case methodNotificationsInit, methodNotificationsCancelled:
-		return nil
-	case methodToolsList:
-		return s.toolsList(req)
-	case methodToolsCall:
-		return s.toolsCall(ctx, req)
-	case methodPing:
-		return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Result: map[string]any{}}
-	default:
-		if len(req.ID) == 0 || string(req.ID) == "null" {
-			return nil
-		}
-		return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Error: errMethodNotFound}
+	if s.httpAddr != "" {
+		return s.serveHTTP(ctx)
 	}
+	return s.mcp.Run(ctx, s.transport)
 }
 
-func (s *Server) initialize(ctx context.Context, req *request) *response {
-	if len(req.Params) > 0 {
-		var p initializeParams
-		if err := json.Unmarshal(req.Params, &p); err != nil {
-			return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Error: errInvalidParams}
-		}
-		if p.ClientInfo.Name != "" {
-			slog.InfoContext(ctx, "client connected", "client", p.ClientInfo.Name, "version", p.ClientInfo.Version)
-		}
-		if p.ProtocolVersion != "" && p.ProtocolVersion != protocolVersion {
-			slog.WarnContext(ctx, "client requested different protocol version, responding with server version",
-				"requested", p.ProtocolVersion, "server", protocolVersion)
-		}
+func (s *Server) serveHTTP(ctx context.Context) error {
+	handler := mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return s.mcp },
+		nil,
+	)
+	httpSrv := &http.Server{Addr: s.httpAddr, Handler: withCtxValues(ctx, handler)}
+	go func() {
+		<-ctx.Done()
+		shut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = httpSrv.Shutdown(shut)
+	}()
+	slog.InfoContext(ctx, "HTTP transport listening", "addr", s.httpAddr)
+	if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
 	}
-	// Per MCP spec: always respond with the server's supported version.
-	// The client decides whether to continue or disconnect.
-	return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Result: initializeResult{
-		ProtocolVersion: protocolVersion,
-		Capabilities:    capabilities{Tools: map[string]any{}},
-		ServerInfo:      serverInfo{Name: serverName, Version: serverVersion},
-	}}
+	return nil
 }
 
-func (s *Server) toolsList(req *request) *response {
-	s.mu.RLock()
-	eng := s.engine
-	s.mu.RUnlock()
-	defs := make([]toolDefinition, 0, len(eng.Tools()))
+// registerToolsLocked must be called with s.mu held.
+func (s *Server) registerToolsLocked(eng Engine) {
 	for name, t := range eng.Tools() {
-		defs = append(defs, toolDefinition{
+		name, t := name, t
+		tool := &mcp.Tool{
 			Name:        name,
 			Description: t.Description,
 			InputSchema: buildJSONSchema(t.Params),
-		})
+		}
+		s.mcp.AddTool(tool, s.handlerFor(name, t))
+		s.registered[name] = struct{}{}
 	}
-	return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Result: toolsListResult{Tools: defs}}
 }
 
-func (s *Server) toolsCall(ctx context.Context, req *request) *response {
-	var p toolCallParams
-	if err := json.Unmarshal(req.Params, &p); err != nil {
-		return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Error: errInvalidParams}
-	}
-	if p.Name == "" {
-		return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Error: errInvalidParams}
-	}
+// handlerFor builds the SDK ToolHandler for one engine tool.
+func (s *Server) handlerFor(name string, t config.Tool) mcp.ToolHandler {
+	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var args map[string]any
+		if len(req.Params.Arguments) > 0 {
+			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+				return errorResult(fmt.Sprintf("invalid arguments: %v", err)), nil
+			}
+		}
 
-	s.mu.RLock()
-	eng := s.engine
-	s.mu.RUnlock()
-	if tool, ok := eng.Tools()[p.Name]; !ok || tool.LogParams == nil || *tool.LogParams {
-		slog.DebugContext(ctx, "tool/call", "tool", p.Name, "params", p.Arguments)
-	} else {
-		slog.DebugContext(ctx, "tool/call", "tool", p.Name)
-	}
+		if t.LogParams == nil || *t.LogParams {
+			slog.DebugContext(ctx, "tool/call", "tool", name, "params", args)
+		} else {
+			slog.DebugContext(ctx, "tool/call", "tool", name)
+		}
 
-	start := time.Now()
-	out, err := eng.Execute(ctx, p.Name, p.Arguments)
-	duration := time.Since(start).Milliseconds()
+		s.mu.Lock()
+		eng := s.engine
+		s.mu.Unlock()
 
-	if err != nil {
-		slog.InfoContext(ctx, "tool/call done", "tool", p.Name, "duration_ms", duration, "error", err)
-		return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Result: textResult(fmt.Sprintf("Error: %v", err), true)}
+		start := time.Now()
+		out, err := eng.Execute(ctx, name, args)
+		duration := time.Since(start).Milliseconds()
+		if err != nil {
+			slog.InfoContext(ctx, "tool/call done", "tool", name, "duration_ms", duration, "error", err)
+			return errorResult(fmt.Sprintf("Error: %v", err)), nil
+		}
+		slog.InfoContext(ctx, "tool/call done", "tool", name, "duration_ms", duration)
+		return textResult(out), nil
 	}
-	slog.InfoContext(ctx, "tool/call done", "tool", p.Name, "duration_ms", duration)
-	return &response{JSONRPC: jsonrpcVersion, ID: req.ID, Result: textResult(out, false)}
 }
 
-// textResult wraps text in the standard single-content toolResult.
-func textResult(text string, isError bool) toolResult {
-	return toolResult{
-		Content: []toolContent{{Type: "text", Text: text}},
-		IsError: isError,
+func textResult(text string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}
+}
+
+func errorResult(text string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		IsError: true,
 	}
 }

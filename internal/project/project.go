@@ -112,13 +112,11 @@ func (m *indexManager) processSources(ctx context.Context, entries []sourceEntry
 	sem := make(chan struct{}, 4)
 
 	for _, e := range entries {
-		wg.Add(1)
-		go func(e sourceEntry) {
-			defer wg.Done()
+		wg.Go(func() {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			m.processEntry(ctx, e, skipIndex)
-		}(e)
+		})
 	}
 
 	wg.Wait()
