@@ -25,7 +25,7 @@ mcpsmithy serve [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `-c, --config` | `string` | `.mcpsmithy.yaml` | Path to config. |
-| `--transport` | `enum(stdio,http)` | `stdio` | Transport to use. |
+| `--transport` | `enum(stdio,http)` | `stdio` | Transport to use (one of: stdio,http). |
 | `--addr` | `string` | `:8080` | Listen address (HTTP transport only). |
 | `--watch` | `bool` | `false` | Watch config file and hot-reload on change. |
 
