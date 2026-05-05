@@ -24,34 +24,6 @@ AI coding assistants can discover and invoke them.
 
 Dependencies flow in one direction; leaf packages know nothing about
 the packages that import them.
-
-## Data Flow
-
-```
- stdin / HTTP POST (/message)
-   │
-   ▼
- server.Transport         stdio: reads newline-delimited JSON
- (stdio or http)          http:  receives POST body
-   │
-   ▼
- server.Server            Dispatches by method name
-   │
-   ├─ initialize          Returns capabilities + server info
-   ├─ tools/list          Returns tool definitions from config
-   ├─ tools/call  ───►  tools.Engine
-   │                      │
-   │                      └─ template handler  → templateEngine rendering
-   ├─ ping                Returns empty result
-   ├─ notifications/*     Silently dropped
-   │
-   ▼
- server.Transport         stdio: writes JSON-RPC to stdout
- (stdio or http)          http:  pushes SSE event to GET /sse stream
-```
-
-All logs go to **stderr** to keep stdout and the SSE stream clean.
-
 ## Config-Driven Design
 
 The engine builds a `Handler` function for each tool at startup by
@@ -119,14 +91,14 @@ have no remote endpoint to fetch from).
 
 ## Concurrency Model
 
-The stdio transport is effectively sequential: one goroutine reads requests and
-the dispatch loop handles them one at a time. `writeResponse` holds a mutex to
-guard against any future concurrent writes.
+The stdio transport is effectively sequential: the SDK reads requests
+serially from stdin and dispatches them through registered handlers.
 
-The HTTP transport is concurrent by Go's `net/http` design; each incoming
-request is handled in its own goroutine. Responses are serialized back to the
-correct SSE stream via a per-session buffered channel, so each client's stream
-is coherent even under concurrent load.
+The HTTP transport (Streamable HTTP) is concurrent by Go's `net/http`
+design; each incoming request is handled in its own goroutine. The SDK
+manages session state via the `Mcp-Session-Id` header so that
+notifications (such as `tools/list_changed`) reach the right client
+even under concurrent load.
 
 ## Error Handling
 

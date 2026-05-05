@@ -15,7 +15,7 @@ import (
 // ServeCmd starts the MCP server.
 type ServeCmd struct {
 	ConfigFlag
-	Transport string `help:"Transport to use." default:"stdio" enum:"stdio,http"`
+	Transport string `help:"Transport to use (one of: ${enum})." default:"stdio" enum:"stdio,http"`
 	Addr      string `help:"Listen address (HTTP transport only)." default:":8080"`
 	Watch     bool   `help:"Watch config file and hot-reload on change." default:"false"`
 }

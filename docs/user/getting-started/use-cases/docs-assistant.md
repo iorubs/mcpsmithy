@@ -20,7 +20,7 @@ manually.
 
 ## Technical overview
 
-**Deployment:** HTTP/SSE. The agent has no filesystem access to the
+**Deployment:** HTTP. The agent has no filesystem access to the
 docs; every tool exposed by mcpsmithy is its only way to discover,
 search, and read content.
 
@@ -57,7 +57,7 @@ Then use a prompt like:
 > Here's the structure: [list your sections]. Create a convention for
 > each section with an ID, and add relations between them so agents
 > can navigate the graph. Expose `get_convention`, `search`, and
-> `read_doc` tools. The server will run in HTTP/SSE mode via Docker.
+> `read_doc` tools. The server will run in HTTP mode via Docker.
 
 See [Assisted setup](../guided-setup.md) for the full workflow.
 :::

@@ -23,7 +23,7 @@ building or maintaining a custom tool server.
 
 ## Technical overview
 
-**Deployment:** HTTP/SSE. The agent connects to mcpsmithy over HTTP as
+**Deployment:** HTTP. The agent connects to mcpsmithy over HTTP as
 one of its tool providers. mcpsmithy serves the knowledge layer; the
 application handles orchestration, actions, and user interaction.
 
@@ -72,7 +72,7 @@ Then use a prompt like:
 > [list any http sources for startup fetch]. For live data, create
 > tools using `http_get`, `http_post`, and `http_put`; hardcode the
 > base URL in each template. Add `search` and `find_convention`.
-> The server will run in HTTP/SSE mode via Docker.
+> The server will run in HTTP mode via Docker.
 
 See [Assisted setup](../guided-setup.md) for the full workflow.
 :::

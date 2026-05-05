@@ -40,6 +40,15 @@ transitive dependencies, and API stability.
   evolving.
 - `go.yaml.in/yaml/v4`: YAML config parsing. Maintained by the
   YAML spec maintainers with zero transitive dependencies.
+- `github.com/modelcontextprotocol/go-sdk`: MCP framing and
+  transports (stdio, Streamable HTTP). Pulls in `jsonschema-go` as
+  a transitive. Adopted as a tactical choice across the repo while the
+  spec (Streamable HTTP, session lifecycle, cancellation,
+  list-changed) stabilises. A stdlib-only replacement is on the
+  table once the surface settles, and would be rolled out across
+  all three modules together; roughly ~400 lines of transport and
+  protocol code would be needed on the server side. Tracked as a
+  follow-up so we can return to a fully stdlib-first stack.
 
 Avoid adding dependencies unless they provide significant value over a
 stdlib solution.
@@ -104,7 +113,7 @@ specific problem.**
 | **Error** | Failures that stop or degrade the current operation. The server or command cannot continue normally. | Config load failure, engine build failure, hot-reload failure. |
 | **Warn** | Unexpected conditions that are recoverable. The operation continues but the result may be incomplete. | Source fetch error (skipped, others continue), malformed JSON-RPC line, protocol version mismatch. |
 | **Info** | Significant lifecycle events and operations involving network or I/O that an operator would want to see. One line per event, not per item. | Server starting, ready, fetching a remote source, index summary totals, hot-reload swap, refresh complete. |
-| **Debug** | Per-item detail, internal decisions, protocol wire traffic. Useful for diagnosing but too noisy for normal operation. | Per-source index/skip/merge counts, JSON-RPC recv/send, tool call params, SSE connect/disconnect, refresh heartbeat. |
+| **Debug** | Per-item detail, internal decisions, protocol wire traffic. Useful for diagnosing but too noisy for normal operation. | Per-source index/skip/merge counts, JSON-RPC recv/send, tool call params, HTTP session lifecycle, refresh heartbeat. |
 
 ### Level Decision Rules
 

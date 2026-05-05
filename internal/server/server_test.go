@@ -1,20 +1,16 @@
 package server
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/tools"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
-
-// WithStreams configures the server to use the stdio transport with the given reader and writer.
-func WithStreams(r io.Reader, w io.Writer) Option {
-	return func(s *Server) { s.tp = newStdio(r, w) }
-}
 
 func newTestEngine(t *testing.T) *tools.Engine {
 	t.Helper()
@@ -35,115 +31,119 @@ func newTestEngine(t *testing.T) *tools.Engine {
 	return eng
 }
 
-func testServer(t *testing.T, input string) string {
+// connect dials the SDK server in-process and returns an initialized client session.
+func connect(t *testing.T, srv *Server, opts *mcp.ClientOptions) *mcp.ClientSession {
 	t.Helper()
-	eng := newTestEngine(t)
-	reader := strings.NewReader(input)
-	var out bytes.Buffer
-	srv := New(eng, WithStreams(reader, &out))
-	_ = srv.Serve(context.Background())
-	return out.String()
+	clientT, serverT := mcp.NewInMemoryTransports()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	if _, err := srv.mcp.Connect(ctx, serverT, nil); err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "0.0.1"}, opts)
+	cs, err := client.Connect(ctx, clientT, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	return cs
 }
 
-func TestProtocol(t *testing.T) {
-	tests := []struct {
-		name       string
-		input      string
-		wantSubstr string
-		wantErr    bool
-	}{
-		{
-			"initialize",
-			`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`,
-			"protocolVersion",
-			false,
-		},
-		{
-			"initialize version negotiation",
-			`{"jsonrpc":"2.0","id":7,"method":"initialize","params":{"protocolVersion":"1999-01-01","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`,
-			"protocolVersion",
-			false,
-		},
-		{
-			"ping",
-			`{"jsonrpc":"2.0","id":2,"method":"ping"}`,
-			"result",
-			false,
-		},
-		{
-			"tools/list",
-			`{"jsonrpc":"2.0","id":3,"method":"tools/list"}`,
-			"echo_tool",
-			false,
-		},
-		{
-			"unknown method",
-			`{"jsonrpc":"2.0","id":4,"method":"unknown/method"}`,
-			"-32601",
-			true,
-		},
-		{
-			"tools/call",
-			`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"echo_tool","arguments":{}}}`,
-			"hello world",
-			false,
-		},
-		{
-			"tools/call unknown tool",
-			`{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"nonexistent","arguments":{}}}`,
-			"nonexistent",
-			true,
-		},
+func TestInitializeAndPing(t *testing.T) {
+	srv := New(newTestEngine(t))
+	cs := connect(t, srv, nil)
+
+	got := cs.InitializeResult()
+	if got == nil || got.ServerInfo == nil {
+		t.Fatalf("missing initialize result/serverInfo")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			out := testServer(t, tt.input+"\n")
-			if !strings.Contains(out, tt.wantSubstr) {
-				t.Fatalf("expected %q in output, got: %s", tt.wantSubstr, out)
+	if got.ServerInfo.Name != serverName {
+		t.Errorf("serverInfo.name = %q, want %q", got.ServerInfo.Name, serverName)
+	}
+	if got.ServerInfo.Version != serverVersion {
+		t.Errorf("serverInfo.version = %q, want %q", got.ServerInfo.Version, serverVersion)
+	}
+
+	if err := cs.Ping(context.Background(), nil); err != nil {
+		t.Fatalf("ping: %v", err)
+	}
+}
+
+func TestToolsListAndCall(t *testing.T) {
+	srv := New(newTestEngine(t))
+	cs := connect(t, srv, nil)
+
+	list, err := cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("list tools: %v", err)
+	}
+	if len(list.Tools) != 1 || list.Tools[0].Name != "echo_tool" {
+		t.Fatalf("unexpected tools: %+v", list.Tools)
+	}
+
+	out, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "echo_tool",
+		Arguments: map[string]any{},
+	})
+	if err != nil {
+		t.Fatalf("call tool: %v", err)
+	}
+	if out.IsError {
+		t.Fatalf("tool returned isError; content=%+v", out.Content)
+	}
+	if len(out.Content) == 0 {
+		t.Fatalf("missing tool content")
+	}
+	tc, ok := out.Content[0].(*mcp.TextContent)
+	if !ok {
+		t.Fatalf("first content not text: %T", out.Content[0])
+	}
+	if !strings.Contains(tc.Text, "hello world") {
+		t.Errorf("tool output = %q, want contains %q", tc.Text, "hello world")
+	}
+}
+
+func TestToolsCallUnknown(t *testing.T) {
+	srv := New(newTestEngine(t))
+	cs := connect(t, srv, nil)
+
+	_, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "nonexistent",
+		Arguments: map[string]any{},
+	})
+	if err == nil {
+		t.Fatal("expected error calling unknown tool, got nil")
+	}
+}
+
+func TestSwapEngineEmitsListChanged(t *testing.T) {
+	var changed atomic.Int32
+	notified := make(chan struct{}, 1)
+
+	srv := New(newTestEngine(t))
+	cs := connect(t, srv, &mcp.ClientOptions{
+		ToolListChangedHandler: func(context.Context, *mcp.ToolListChangedRequest) {
+			changed.Add(1)
+			select {
+			case notified <- struct{}{}:
+			default:
 			}
-			hasErr := strings.Contains(out, `"error"`) || strings.Contains(out, `"isError"`)
-			if tt.wantErr && !hasErr {
-				t.Fatalf("expected error in output, got: %s", out)
-			}
-		})
+		},
+	})
+
+	// Initial list to ensure connection is up.
+	if _, err := cs.ListTools(context.Background(), nil); err != nil {
+		t.Fatalf("list tools: %v", err)
 	}
-}
 
-func TestMalformedJSONDoesNotTerminate(t *testing.T) {
-	// Send a bad JSON line followed by a valid ping. The server should
-	// skip the bad line and still process the ping.
-	input := "not valid json\n" +
-		`{"jsonrpc":"2.0","id":1,"method":"ping"}` + "\n"
-	out := testServer(t, input)
+	srv.SwapEngine(newTestEngine(t))
 
-	// Should contain a parse error response for the bad line.
-	if !strings.Contains(out, "-32700") {
-		t.Fatalf("expected parse error (-32700) in output, got: %s", out)
-	}
-	// Should still process the valid ping.
-	if !strings.Contains(out, `"result"`) {
-		t.Fatalf("expected ping result in output, got: %s", out)
-	}
-}
-
-func TestSwapEngineSendsToolsListChanged(t *testing.T) {
-	// After SwapEngine, the server should emit a tools/list_changed
-	// notification so connected clients re-fetch the tool list.
-	eng := newTestEngine(t)
-	reader := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}` + "\n")
-	var out bytes.Buffer
-	srv := New(eng, WithStreams(reader, &out))
-
-	// Serve processes the ping, then hits EOF.
-	_ = srv.Serve(context.Background())
-
-	// Now swap the engine; should write a notification to stdout.
-	out.Reset()
-	eng2 := newTestEngine(t)
-	srv.SwapEngine(eng2)
-
-	data := out.String()
-	if !strings.Contains(data, "notifications/tools/list_changed") {
-		t.Fatalf("expected tools/list_changed notification, got: %s", data)
+	select {
+	case <-notified:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("did not receive tools/list_changed notification (count=%d)", changed.Load())
 	}
 }
