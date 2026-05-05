@@ -68,7 +68,7 @@ docker build mcpsmithy:latest
 
 ## Next steps
 
-Once connected, you'll need a `.mcpsmithy.yaml` config. See the
+Next you'll need a `.mcpsmithy.yaml` config. See the
 [Use Cases](./use-cases/docs-assistant) section to find a scenario
 that fits your needs, then follow the tip at the bottom to generate
 your config with your agent.
