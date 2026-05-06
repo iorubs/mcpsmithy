@@ -27,7 +27,7 @@ type Config struct {
 	// Project identity, description, and content sources.
 	Project Project `yaml:"project" mcpsmithy:"required"`
 	// Rules and docs the AI should follow, keyed by name.
-	Conventions map[string]Convention `yaml:"conventions" mcpsmithy:"required"`
+	Conventions map[string]Convention `yaml:"conventions,omitempty"`
 	// Tools the AI can call, keyed by tool name (the name the AI sees).
 	Tools map[string]Tool `yaml:"tools" mcpsmithy:"required"`
 }

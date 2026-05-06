@@ -120,10 +120,13 @@ func (s *Server) serveHTTP(ctx context.Context) error {
 // registerToolsLocked must be called with s.mu held.
 func (s *Server) registerToolsLocked(eng Engine) {
 	for name, t := range eng.Tools() {
-		name, t := name, t
+		desc := t.Description
+		if desc == "" {
+			desc = name
+		}
 		tool := &mcp.Tool{
 			Name:        name,
-			Description: t.Description,
+			Description: desc,
 			InputSchema: buildJSONSchema(t.Params),
 		}
 		s.mcp.AddTool(tool, s.handlerFor(name, t))
