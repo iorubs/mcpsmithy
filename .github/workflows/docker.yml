@@ -47,11 +47,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: smithylabs/mcpsmithy
-          readme-filepath: DOCKERHUB.md
-          short-description: "Project-aware MCP tool server, no custom code required"
+      # - name: Update Docker Hub description
+      #   uses: peter-evans/dockerhub-description@v4
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      #     repository: smithylabs/mcpsmithy
+      #     readme-filepath: DOCKERHUB.md
+      #     short-description: "Project-aware MCP tool server, no custom code required"
