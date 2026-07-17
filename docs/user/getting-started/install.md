@@ -38,11 +38,6 @@ Optionally, move the binary to a directory in your `PATH`:
 
 ## Docker
 
-```sh
-# TODO: confirm final image name/registry. For now you can build from source.
-docker build mcpsmithy:latest
-```
-
 ### Connect your agent
 
 **VS Code**; add to `.vscode/mcp.json`:
@@ -56,7 +51,7 @@ docker build mcpsmithy:latest
         "run", "--rm", "-i",
         "-v", "${workspaceFolder}:/project:ro",
         "-w", "/project",
-        "mcpsmithy:latest",
+        "smithylabs/mcpsmithy:latest",
         "serve"
       ]
     }

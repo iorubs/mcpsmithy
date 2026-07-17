@@ -7,10 +7,7 @@
 
 ![mcpsmithy forge](docs/images/forge.png)
 
-**MCPSmithy** is a single Go binary that reads a declarative YAML
-config file and serves a fully functional
-[MCP](https://modelcontextprotocol.io) tool server. It works for
-any software project; no language or framework assumptions baked in.
+**MCPSmithy** is a single Go binary that reads a declarative YAML config file and serves a fully functional [MCP](https://modelcontextprotocol.io) tool server. It works for any software project; no language or framework assumptions baked in.
 
 ## Quick Start
 
