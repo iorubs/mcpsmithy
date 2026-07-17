@@ -8,8 +8,7 @@ sidebar_position: 1
 
 ### Download from GitHub Releases
 
-Download `mcpsmithy-<os>-<arch>` from the
-[latest release](https://github.com/iorubs/mcpsmithy/releases/latest).
+Download `mcpsmithy-<os>-<arch>` from the [latest release](https://github.com/iorubs/mcpsmithy/releases/latest).
 
 ### go install
 
@@ -64,6 +63,4 @@ Optionally, move the binary to a directory in your `PATH`:
 ## Next steps
 
 Next you'll need a `.mcpsmithy.yaml` config. See the
-[Use Cases](./use-cases/docs-assistant) section to find a scenario
-that fits your needs, then follow the tip at the bottom to generate
-your config with your agent.
+[Use Cases](./use-cases/docs-assistant) section to find a scenario that fits your needs, then follow the tip at the bottom to generate your config with your agent.
