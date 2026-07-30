@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/iorubs/mcpsmithy/internal/auth"
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/glob"
 )
@@ -67,6 +68,14 @@ type SourceMeta struct {
 // projectRoot is the workspace root; baseDir is the cache directory for fetched remote sources.
 // global is the project-wide PullPolicy fallback.
 type Factory func(name string, raw any, projectRoot, baseDir string, global config.PullPolicy) (Source, SourceMeta, error)
+
+// CredentialConsumer is implemented by sources that authenticate outbound
+// requests. The orchestrator calls SetCredentials after construction when a
+// source implements it, which keeps [Factory] free of a parameter that only
+// network-backed source kinds need.
+type CredentialConsumer interface {
+	SetCredentials(*auth.Store)
+}
 
 // Registry holds source factories keyed by kind (e.g. "local", "git").
 type Registry struct {

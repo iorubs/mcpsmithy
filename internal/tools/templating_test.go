@@ -2,12 +2,16 @@ package tools
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/iorubs/mcpsmithy/internal/auth"
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/search"
 )
@@ -21,7 +25,7 @@ func TestConventionsForIncludesDescriptions(t *testing.T) {
 			"search-only": {Description: "Search only convention", Docs: []config.DocRef{{Source: "docs", Paths: []string{"docs/search.md"}}}},
 		},
 	}
-	e := newTemplateEngine(cfg, "/project", cfg.Conventions, nil, nil, nil)
+	e := newTemplateEngine(cfg, "/project", cfg.Conventions, nil, nil, nil, nil)
 	fm := e.funcMap(nil)
 	fn := fm["conventions_for"].(func(string) []config.Convention)
 	result := fn("internal/controller/foo.go")
@@ -72,7 +76,7 @@ func TestConventionsForIncludesRelations(t *testing.T) {
 			},
 		},
 	}
-	e := newTemplateEngine(cfg, "/project", cfg.Conventions, nil, nil, nil)
+	e := newTemplateEngine(cfg, "/project", cfg.Conventions, nil, nil, nil, nil)
 	fm := e.funcMap(nil)
 	fn := fm["conventions_for"].(func(string) []config.Convention)
 	result := fn("internal/controller/foo.go")
@@ -119,7 +123,7 @@ func TestSourceMethod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := newTemplateEngine(tt.cfg, "/project", nil, nil, nil, nil)
+			e := newTemplateEngine(tt.cfg, "/project", nil, nil, nil, nil, nil)
 			ctx := e.Context(nil)
 			mctx := ctx[config.ReservedContextKey].(mcpsmithyContext)
 			result := mctx.Source(tt.source)
@@ -210,7 +214,7 @@ func TestSearchFor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := newTemplateEngine(tt.cfg, "/project", nil, tt.idxMgr, tt.convIdx, nil)
+			e := newTemplateEngine(tt.cfg, "/project", nil, tt.idxMgr, tt.convIdx, nil, nil)
 			fn := e.funcMap(nil)["search_for"].(func(string, ...any) string)
 			result := fn(tt.query, 10, 200)
 			tt.check(t, result)
@@ -307,11 +311,122 @@ func TestGrepFunc(t *testing.T) {
 	}
 }
 
+func TestFromJSONFunc(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		check   func(*testing.T, any)
+	}{
+		{
+			name:  "object",
+			input: `{"status":"resolved","count":2}`,
+			check: func(t *testing.T, v any) {
+				m, ok := v.(map[string]any)
+				if !ok {
+					t.Fatalf("expected map, got %T", v)
+				}
+				if m["status"] != "resolved" {
+					t.Fatalf("expected status resolved, got %v", m["status"])
+				}
+			},
+		},
+		{
+			name:  "array",
+			input: `[{"id":1},{"id":2}]`,
+			check: func(t *testing.T, v any) {
+				s, ok := v.([]any)
+				if !ok {
+					t.Fatalf("expected slice, got %T", v)
+				}
+				if len(s) != 2 {
+					t.Fatalf("expected 2 elements, got %d", len(s))
+				}
+			},
+		},
+		{
+			name:  "nested object",
+			input: `{"incident":{"service":{"name":"api"}}}`,
+			check: func(t *testing.T, v any) {
+				m := v.(map[string]any)
+				inc := m["incident"].(map[string]any)
+				svc := inc["service"].(map[string]any)
+				if svc["name"] != "api" {
+					t.Fatalf("expected nested name api, got %v", svc["name"])
+				}
+			},
+		},
+		{
+			name:  "scalar string",
+			input: `"hello"`,
+			check: func(t *testing.T, v any) {
+				if v != "hello" {
+					t.Fatalf("expected hello, got %v", v)
+				}
+			},
+		},
+		{
+			name:  "scalar number decodes as float64",
+			input: `42`,
+			check: func(t *testing.T, v any) {
+				if v != float64(42) {
+					t.Fatalf("expected float64(42), got %T(%v)", v, v)
+				}
+			},
+		},
+		{
+			name:  "null",
+			input: `null`,
+			check: func(t *testing.T, v any) {
+				if v != nil {
+					t.Fatalf("expected nil, got %v", v)
+				}
+			},
+		},
+		{
+			name:    "malformed json",
+			input:   `{"broken":`,
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			wantErr: true,
+		},
+		{
+			name:    "html error page",
+			input:   "<html><body>401</body></html>",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v, err := fromJSONFunc(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got value %v", v)
+				}
+				if !strings.Contains(err.Error(), "from_json") {
+					t.Fatalf("error should name the function, got: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tt.check(t, v)
+		})
+	}
+}
+
 func TestHTTPGetFuncMap(t *testing.T) {
-	// Verify http_get, http_post, and http_put are registered in the func map.
+	// Verify http_get, http_post, http_put, and from_json are registered in the func map.
 	cfg := &config.Config{}
-	e := newTemplateEngine(cfg, "/project", nil, nil, nil, nil)
+	e := newTemplateEngine(cfg, "/project", nil, nil, nil, nil, nil)
 	fm := e.funcMap(nil)
+	if _, ok := fm["from_json"]; !ok {
+		t.Fatal("from_json should be in func map")
+	}
 	if _, ok := fm["http_get"]; !ok {
 		t.Fatal("http_get should be in func map")
 	}
@@ -321,6 +436,88 @@ func TestHTTPGetFuncMap(t *testing.T) {
 	if _, ok := fm["http_put"]; !ok {
 		t.Fatal("http_put should be in func map")
 	}
+}
+
+// TestHTTPFuncsSendCredentials verifies the HTTP template functions actually
+// authenticate. Nothing covered the credential path at these call sites before.
+func TestHTTPFuncsSendCredentials(t *testing.T) {
+	var gotAuth, gotCustom string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		gotCustom = r.Header.Get("PRIVATE-TOKEN")
+		w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	host := srv.Listener.Addr().(*net.TCPAddr).IP.String()
+	creds := writeStore(t, "credentials:\n  "+host+":\n    scheme: Token\n    token: abc123\n")
+
+	e := newTemplateEngine(&config.Config{}, "/project", nil, nil, nil, nil, creds)
+	fm := e.funcMap(nil)
+
+	t.Run("http_get sends the custom scheme", func(t *testing.T) {
+		gotAuth, gotCustom = "", ""
+		fn := fm["http_get"].(func(string, ...any) (string, error))
+		if _, err := fn(srv.URL); err != nil {
+			t.Fatalf("http_get: %v", err)
+		}
+		if gotAuth != "Token abc123" {
+			t.Errorf("Authorization = %q, want %q", gotAuth, "Token abc123")
+		}
+	})
+
+	t.Run("http_post sends the custom scheme", func(t *testing.T) {
+		gotAuth, gotCustom = "", ""
+		fn := fm["http_post"].(func(string, string, ...any) (string, error))
+		if _, err := fn(srv.URL, `{}`); err != nil {
+			t.Fatalf("http_post: %v", err)
+		}
+		if gotAuth != "Token abc123" {
+			t.Errorf("Authorization = %q, want %q", gotAuth, "Token abc123")
+		}
+	})
+
+	t.Run("custom header replaces Authorization", func(t *testing.T) {
+		gotAuth, gotCustom = "", ""
+		hdrCreds := writeStore(t, "credentials:\n  "+host+":\n    header: PRIVATE-TOKEN\n    token: glpat-xyz\n")
+		e := newTemplateEngine(&config.Config{}, "/project", nil, nil, nil, nil, hdrCreds)
+		fn := e.funcMap(nil)["http_get"].(func(string, ...any) (string, error))
+		if _, err := fn(srv.URL); err != nil {
+			t.Fatalf("http_get: %v", err)
+		}
+		if gotCustom != "glpat-xyz" {
+			t.Errorf("PRIVATE-TOKEN = %q, want %q", gotCustom, "glpat-xyz")
+		}
+		if gotAuth != "" {
+			t.Errorf("Authorization = %q, want empty", gotAuth)
+		}
+	})
+
+	t.Run("nil store sends no credentials", func(t *testing.T) {
+		gotAuth, gotCustom = "", ""
+		e := newTemplateEngine(&config.Config{}, "/project", nil, nil, nil, nil, nil)
+		fn := e.funcMap(nil)["http_get"].(func(string, ...any) (string, error))
+		if _, err := fn(srv.URL); err != nil {
+			t.Fatalf("http_get: %v", err)
+		}
+		if gotAuth != "" {
+			t.Errorf("Authorization = %q, want empty", gotAuth)
+		}
+	})
+}
+
+// writeStore builds a credentials store from inline YAML.
+func writeStore(t *testing.T, content string) *auth.Store {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "credentials")
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := auth.Load(path)
+	if err != nil {
+		t.Fatalf("loading credentials: %v", err)
+	}
+	return store
 }
 
 func TestHTTPFetch(t *testing.T) {
@@ -357,7 +554,7 @@ func TestHTTPFetch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(tt.handler)
 			defer ts.Close()
-			body, err := httpFetch(context.Background(), ts.URL, 10*1024*1024, nil)
+			body, err := httpFetch(context.Background(), ts.URL, 10*1024*1024, nil, nil)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatal("expected error")
@@ -458,7 +655,7 @@ func TestHTTPSend(t *testing.T) {
 			if ct == "" {
 				ct = "application/json"
 			}
-			body, err := httpSend(context.Background(), tt.method, ts.URL, tt.body, ct, 10*1024*1024, nil)
+			body, err := httpSend(context.Background(), tt.method, ts.URL, tt.body, ct, 10*1024*1024, nil, nil)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatal("expected error")
@@ -581,7 +778,7 @@ func TestHTTPFetchAllowList(t *testing.T) {
 
 	// Allowed host; should succeed.
 	allowed := map[string]bool{ts.URL: true}
-	body, err := httpFetch(context.Background(), ts.URL+"/path", 1024, allowed)
+	body, err := httpFetch(context.Background(), ts.URL+"/path", 1024, allowed, nil)
 	if err != nil {
 		t.Fatalf("expected success, got: %v", err)
 	}
@@ -591,7 +788,7 @@ func TestHTTPFetchAllowList(t *testing.T) {
 
 	// Blocked host; should fail before any network I/O.
 	blocked := map[string]bool{"https://other.example.com": true}
-	_, err = httpFetch(context.Background(), ts.URL+"/path", 1024, blocked)
+	_, err = httpFetch(context.Background(), ts.URL+"/path", 1024, blocked, nil)
 	if err == nil {
 		t.Fatal("expected error for blocked host")
 	}
@@ -608,7 +805,7 @@ func TestHTTPSendAllowList(t *testing.T) {
 
 	// Allowed host; should succeed.
 	allowed := map[string]bool{ts.URL: true}
-	body, err := httpSend(context.Background(), http.MethodPost, ts.URL, "{}", "application/json", 1024, allowed)
+	body, err := httpSend(context.Background(), http.MethodPost, ts.URL, "{}", "application/json", 1024, allowed, nil)
 	if err != nil {
 		t.Fatalf("expected success, got: %v", err)
 	}
@@ -618,7 +815,7 @@ func TestHTTPSendAllowList(t *testing.T) {
 
 	// Blocked host; should fail before any network I/O.
 	blocked := map[string]bool{"https://other.example.com": true}
-	_, err = httpSend(context.Background(), http.MethodPost, ts.URL, "{}", "application/json", 1024, blocked)
+	_, err = httpSend(context.Background(), http.MethodPost, ts.URL, "{}", "application/json", 1024, blocked, nil)
 	if err == nil {
 		t.Fatal("expected error for blocked host")
 	}

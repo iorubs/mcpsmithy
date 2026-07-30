@@ -39,20 +39,52 @@ ready to write it.
 
 ### Authentication
 
-All HTTP requests for sources and HTTP template functions read
-`~/.netrc` automatically. When login is `token` (or omitted), the
-password is sent as a Bearer token. Otherwise login and password are
-sent as Basic Auth.
+HTTP sources and the HTTP template functions authenticate from a
+credentials file, by default `~/.mcpsmithy/credentials`. Set
+`project.credentials` to use a different path. The file must not be
+readable by group or others (`chmod 600`), and it belongs outside the
+project directory: `file_read` is sandboxed to the project root, so a
+credentials file inside it could be read by the agent or indexed by a
+local source glob.
 
-```
-machine bearer.example.com
-  login token
-  password <bearer-token>
+Entries are keyed by hostname. The fields you set determine the header
+that gets sent:
 
-machine basic.example.com
-  login <username>
-  password <password>
+```yaml
+credentials:
+  # Authorization: Bearer ghp_xxx
+  api.github.com:
+    token: ghp_xxx
+
+  # Authorization: Token abc123
+  # For vendor schemes that are not Bearer.
+  api.pagerduty.com:
+    scheme: Token
+    token: abc123
+
+  # PRIVATE-TOKEN: glpat-xxx
+  # For APIs that use their own header instead of Authorization.
+  gitlab.example.com:
+    header: PRIVATE-TOKEN
+    token: glpat-xxx
+
+  # Authorization: Basic base64(user:pass)
+  basic.example.com:
+    username: <username>
+    password: <password>
 ```
+
+A scheme is a single word joined to the token by a space. For a vendor
+format like `Authorization: Token token=abc`, set `scheme: Token` and
+`token: token=abc`.
+
+Hosts with no entry fall back to `~/.netrc`, where a login of `token`
+(or no login) sends the password as a Bearer token and any other login
+sends Basic Auth. netrc is deprecated: its keyword set is fixed and the
+file is shared with curl and git, so it cannot express vendor schemes or
+custom header names. Prefer the credentials file.
+
+Git sources do not use either mechanism; see the project section.
 
 ### Decision Rules
 
@@ -177,15 +209,24 @@ separately.
 
 ### Git Authentication
 
-Git sources use your existing git credentials; SSH keys, credential
-helpers, or HTTPS via `~/.netrc`.
+Git sources shell out to the `git` binary, so they use your existing
+git credentials; SSH keys, credential helpers, or HTTPS via `~/.netrc`.
+They deliberately do **not** read the credentials file: git resolves
+credentials itself, which keeps SSH keys, credential managers, and
+enterprise setups working as they already do. Configure git auth the way
+you would for a normal clone.
 
 ### HTTP Source Authentication
 
 HTTP sources (for forge archive downloads, artifact stores, private
-APIs) read `~/.netrc` automatically. Custom headers can be added for
-bearer tokens or API keys. Use an HTTP source instead of git when
-you want a tarball download without requiring the `git` binary.
+APIs) authenticate from the credentials file described in the guide
+section, keyed by hostname. Custom `headers` can still be set per
+source; they are applied after credentials, so an explicit header wins.
+Prefer the credentials file for secrets, since `headers` values live in
+the committed config where the agent can read them.
+
+Use an HTTP source instead of git when you want a tarball download
+without requiring the `git` binary.
 
 ### Pre-Built Images Pattern
 
@@ -617,10 +658,46 @@ The AI can already read local files with its editor tools. Use
 `file_read` in templates only for content the AI cannot access
 directly; files outside the workspace or generated content.
 
+### Parse JSON Responses Instead of Grepping Them
+
+When an HTTP function returns JSON, pipe it through `from_json`
+rather than matching it with `grep`. The result is a value the
+template can index and range over, so the tool returns only the
+fields that matter instead of a wall of raw JSON:
+
+```yaml
+template: |
+  {{ $r := from_json (http_get .url) }}
+  Status: {{ $r.status }}
+  {{ range $r.items }}- {{ .id }}: {{ .title }}
+  {{ end }}
+```
+
+Reach for `grep` when the response is plain text (CI logs, for
+example); reach for `from_json` when it is an API payload.
+
+Two things to know. `from_json` fails the tool call when the body is
+not valid JSON, so an endpoint that returns HTML on error surfaces as
+a clear failure rather than silently matching nothing. And because a
+response shape is unknown until the call runs, templates calling
+`from_json` skip the config-load dry-run: misspelled param names and
+wrong argument counts in those templates surface on the first tool
+call rather than at startup. Syntax errors and unknown function names
+are still caught at load.
+
 ### HTTP Authentication
 
-`http_get`, `http_post`, and `http_put` authenticate automatically
-via `~/.netrc`. The password field is sent as a Bearer token.
+`http_get`, `http_post`, and `http_put` authenticate automatically from
+the credentials file (`~/.mcpsmithy/credentials` by default), matched on
+the request hostname. It supports Bearer, Basic, vendor schemes such as
+`Authorization: Token <value>`, and APIs that use their own header
+instead of `Authorization`. Hosts with no entry fall back to the
+deprecated `~/.netrc`. See the guide section for the file format.
+
+Credentials are never exposed to templates or params, so the agent
+cannot read or redirect them. When a URL comes from a param, set the
+`urlAllowList` tool option so credentials cannot be sent to a host the
+agent chooses.
 
 ### Tool Sets by Use Case
 

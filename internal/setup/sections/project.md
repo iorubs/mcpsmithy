@@ -36,15 +36,24 @@ separately.
 
 ### Git Authentication
 
-Git sources use your existing git credentials; SSH keys, credential
-helpers, or HTTPS via `~/.netrc`.
+Git sources shell out to the `git` binary, so they use your existing
+git credentials; SSH keys, credential helpers, or HTTPS via `~/.netrc`.
+They deliberately do **not** read the credentials file: git resolves
+credentials itself, which keeps SSH keys, credential managers, and
+enterprise setups working as they already do. Configure git auth the way
+you would for a normal clone.
 
 ### HTTP Source Authentication
 
 HTTP sources (for forge archive downloads, artifact stores, private
-APIs) read `~/.netrc` automatically. Custom headers can be added for
-bearer tokens or API keys. Use an HTTP source instead of git when
-you want a tarball download without requiring the `git` binary.
+APIs) authenticate from the credentials file described in the guide
+section, keyed by hostname. Custom `headers` can still be set per
+source; they are applied after credentials, so an explicit header wins.
+Prefer the credentials file for secrets, since `headers` values live in
+the committed config where the agent can read them.
+
+Use an HTTP source instead of git when you want a tarball download
+without requiring the `git` binary.
 
 ### Pre-Built Images Pattern
 

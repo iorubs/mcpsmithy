@@ -29,20 +29,52 @@ ready to write it.
 
 ### Authentication
 
-All HTTP requests for sources and HTTP template functions read
-`~/.netrc` automatically. When login is `token` (or omitted), the
-password is sent as a Bearer token. Otherwise login and password are
-sent as Basic Auth.
+HTTP sources and the HTTP template functions authenticate from a
+credentials file, by default `~/.mcpsmithy/credentials`. Set
+`project.credentials` to use a different path. The file must not be
+readable by group or others (`chmod 600`), and it belongs outside the
+project directory: `file_read` is sandboxed to the project root, so a
+credentials file inside it could be read by the agent or indexed by a
+local source glob.
 
-```
-machine bearer.example.com
-  login token
-  password <bearer-token>
+Entries are keyed by hostname. The fields you set determine the header
+that gets sent:
 
-machine basic.example.com
-  login <username>
-  password <password>
+```yaml
+credentials:
+  # Authorization: Bearer ghp_xxx
+  api.github.com:
+    token: ghp_xxx
+
+  # Authorization: Token abc123
+  # For vendor schemes that are not Bearer.
+  api.pagerduty.com:
+    scheme: Token
+    token: abc123
+
+  # PRIVATE-TOKEN: glpat-xxx
+  # For APIs that use their own header instead of Authorization.
+  gitlab.example.com:
+    header: PRIVATE-TOKEN
+    token: glpat-xxx
+
+  # Authorization: Basic base64(user:pass)
+  basic.example.com:
+    username: <username>
+    password: <password>
 ```
+
+A scheme is a single word joined to the token by a space. For a vendor
+format like `Authorization: Token token=abc`, set `scheme: Token` and
+`token: token=abc`.
+
+Hosts with no entry fall back to `~/.netrc`, where a login of `token`
+(or no login) sends the password as a Bearer token and any other login
+sends Basic Auth. netrc is deprecated: its keyword set is fixed and the
+file is shared with curl and git, so it cannot express vendor schemes or
+custom header names. Prefer the credentials file.
+
+Git sources do not use either mechanism; see the project section.
 
 ### Decision Rules
 

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -45,10 +46,11 @@ type templateEngine struct {
 	idx         search.Searcher // source docs index (async-safe via LiveIndex)
 	convIdx     search.Searcher // conventions-only index
 	fsys        fs.FS           // sandbox filesystem for file_read
+	creds       *auth.Store     // credentials for http_get/http_post/http_put; nil sends none
 }
 
-func newTemplateEngine(cfg *config.Config, root string, convs map[string]config.Convention, idx search.Searcher, convIdx search.Searcher, fsys fs.FS) *templateEngine {
-	return &templateEngine{cfg: cfg, root: root, conventions: convs, idx: idx, convIdx: convIdx, fsys: fsys}
+func newTemplateEngine(cfg *config.Config, root string, convs map[string]config.Convention, idx search.Searcher, convIdx search.Searcher, fsys fs.FS, creds *auth.Store) *templateEngine {
+	return &templateEngine{cfg: cfg, root: root, conventions: convs, idx: idx, convIdx: convIdx, fsys: fsys, creds: creds}
 }
 
 // mcpsmithyContext is the struct injected as {{ .mcpsmithy }} in
@@ -219,7 +221,7 @@ func (e *templateEngine) funcMap(opts map[string]any) template.FuncMap {
 					limit = n
 				}
 			}
-			return httpFetch(context.Background(), rawURL, int64(limit)*1024, allowedURLs)
+			return httpFetch(context.Background(), rawURL, int64(limit)*1024, allowedURLs, e.creds)
 		},
 		string(config.BuiltinFuncHTTPPost): func(rawURL string, body string, args ...any) (string, error) {
 			contentType := "application/json"
@@ -234,7 +236,7 @@ func (e *templateEngine) funcMap(opts map[string]any) template.FuncMap {
 					limit = n
 				}
 			}
-			return httpSend(context.Background(), http.MethodPost, rawURL, body, contentType, int64(limit)*1024, allowedURLs)
+			return httpSend(context.Background(), http.MethodPost, rawURL, body, contentType, int64(limit)*1024, allowedURLs, e.creds)
 		},
 		string(config.BuiltinFuncHTTPPut): func(rawURL string, body string, args ...any) (string, error) {
 			contentType := "application/json"
@@ -249,11 +251,12 @@ func (e *templateEngine) funcMap(opts map[string]any) template.FuncMap {
 					limit = n
 				}
 			}
-			return httpSend(context.Background(), http.MethodPut, rawURL, body, contentType, int64(limit)*1024, allowedURLs)
+			return httpSend(context.Background(), http.MethodPut, rawURL, body, contentType, int64(limit)*1024, allowedURLs, e.creds)
 		},
 		string(config.BuiltinFuncGrep): func(pattern string, before, after float64, input string) string {
 			return grepFunc(pattern, before, after, input)
 		},
+		string(config.BuiltinFuncFromJSON): fromJSONFunc,
 	}
 }
 
@@ -415,7 +418,7 @@ func (e *templateEngine) fileRead(pathGlob string, maxKB int) string {
 // that includes the redirect destination from the Location header.
 // When allowedHosts is non-nil the request URL must match one of the
 // entries; otherwise the call is rejected before any network I/O.
-func httpFetch(ctx context.Context, rawURL string, maxRead int64, allowedHosts map[string]bool) (string, error) {
+func httpFetch(ctx context.Context, rawURL string, maxRead int64, allowedHosts map[string]bool, creds *auth.Store) (string, error) {
 	if err := urlAllowedByList(rawURL, allowedHosts); err != nil {
 		return "", err
 	}
@@ -423,7 +426,7 @@ func httpFetch(ctx context.Context, rawURL string, maxRead int64, allowedHosts m
 	if err != nil {
 		return "", fmt.Errorf("creating request: %w", err)
 	}
-	auth.ApplyNetrcAuth(req)
+	creds.Apply(req)
 	resp, err := noRedirectClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("fetching %s: %w", rawURL, err)
@@ -451,7 +454,7 @@ func httpFetch(ctx context.Context, rawURL string, maxRead int64, allowedHosts m
 // Any 2xx response is treated as success. Redirects are never followed.
 // When allowedHosts is non-nil the request URL must match one of the
 // entries; otherwise the call is rejected before any network I/O.
-func httpSend(ctx context.Context, method, rawURL, body, contentType string, maxRead int64, allowedHosts map[string]bool) (string, error) {
+func httpSend(ctx context.Context, method, rawURL, body, contentType string, maxRead int64, allowedHosts map[string]bool, creds *auth.Store) (string, error) {
 	if err := urlAllowedByList(rawURL, allowedHosts); err != nil {
 		return "", err
 	}
@@ -460,7 +463,7 @@ func httpSend(ctx context.Context, method, rawURL, body, contentType string, max
 		return "", fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Content-Type", contentType)
-	auth.ApplyNetrcAuth(req)
+	creds.Apply(req)
 	resp, err := noRedirectClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("%s %s: %w", method, rawURL, err)
@@ -546,4 +549,17 @@ func grepFunc(pattern string, before, after float64, input string) string {
 		}
 	}
 	return sb.String()
+}
+
+// fromJSONFunc implements the from_json template function.
+// It parses a JSON string into a Go value (map, slice, or scalar) so templates
+// can index into and range over an API response instead of matching it by regex.
+// Returns an error when the input is not valid JSON, which surfaces as a tool
+// execution failure the same way an http_get error does.
+func fromJSONFunc(s string) (any, error) {
+	var v any
+	if err := json.Unmarshal([]byte(s), &v); err != nil {
+		return nil, fmt.Errorf("from_json: %w", err)
+	}
+	return v, nil
 }

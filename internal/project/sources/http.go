@@ -46,6 +46,12 @@ type HTTPSource struct {
 	extract *bool
 	destDir string
 	policy  config.PullPolicy
+	creds   *auth.Store
+}
+
+// SetCredentials implements [CredentialConsumer].
+func (s *HTTPSource) SetCredentials(store *auth.Store) {
+	s.creds = store
 }
 
 // httpSourceClient is the shared HTTP client for HTTP source downloads.
@@ -74,7 +80,7 @@ func (s *HTTPSource) Fetch(ctx context.Context) error {
 		return fmt.Errorf("creating http request: %w", err)
 	}
 
-	auth.ApplyNetrcAuth(req)
+	s.creds.Apply(req)
 
 	for k, v := range s.headers {
 		req.Header.Set(k, v)

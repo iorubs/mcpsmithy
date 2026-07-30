@@ -47,6 +47,8 @@ MCPSmithy.
 
 **Why parked:** Path portability is already handled by relative paths and Docker mounts. The credential injection use case belongs to the action tools design; expansion at parse time is the wrong shape for secrets, since the config file is readable by the agent and any injected variable names would be visible to it. Any future design here must address that exposure at the same time.
 
+**Partly addressed:** static API credentials now live in a dedicated credentials file (`~/.mcpsmithy/credentials`, overridable via `project.credentials`) rather than in the config. Because the file sits outside the project and is never exposed to templates or params, it sidesteps the agent-visibility problem above. It covers static tokens only; anything dynamic (short-lived tokens, OAuth flows, per-call credentials) still belongs to the action tools design, which is expected to supersede both this file and the remaining `~/.netrc` fallback.
+
 ---
 
 ### MCP Prompts support

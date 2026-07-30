@@ -9,10 +9,15 @@ import (
 	"strings"
 )
 
-// ApplyNetrcAuth sets the Authorization header on req using .netrc credentials
+// applyNetrcAuth sets the Authorization header on req using .netrc credentials
 // for the request's hostname. When login is "token" (or empty), the password
 // is sent as a Bearer token. Otherwise login and password are sent as Basic Auth.
-func ApplyNetrcAuth(req *http.Request) {
+//
+// Deprecated: netrc cannot express vendor auth schemes or custom header names,
+// because its keyword set is fixed and the file is shared with curl and git.
+// It remains the fallback for hosts absent from the credentials file; see
+// [Store.Apply] and [DefaultCredentialsPath].
+func applyNetrcAuth(req *http.Request) {
 	host := req.URL.Hostname()
 	login, password, ok := netrcLookup(host)
 	if !ok {
@@ -21,21 +26,45 @@ func ApplyNetrcAuth(req *http.Request) {
 	if login == "" || login == "token" {
 		req.Header.Set("Authorization", "Bearer "+password)
 	} else {
-		creds := base64.StdEncoding.EncodeToString([]byte(login + ":" + password))
-		req.Header.Set("Authorization", "Basic "+creds)
+		req.Header.Set("Authorization", "Basic "+basicCreds(login, password))
 	}
+}
+
+// basicCreds encodes a username and password for the Basic auth scheme.
+func basicCreds(username, password string) string {
+	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+}
+
+// NetrcExists reports whether a netrc file is present in the user's home
+// directory. Callers use it to warn that the deprecated credential source is
+// being relied on.
+func NetrcExists() bool {
+	path, err := netrcPath()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(path)
+	return err == nil
+}
+
+// netrcPath returns the netrc file location for the current user.
+func netrcPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	if runtime.GOOS == "windows" {
+		return filepath.Join(home, "_netrc"), nil
+	}
+	return filepath.Join(home, ".netrc"), nil
 }
 
 // netrcLookup reads ~/.netrc and extracts credentials for the given host.
 // Empty strings and false are returned if no entry matches or the file is absent.
 func netrcLookup(host string) (login, password string, ok bool) {
-	home, err := os.UserHomeDir()
+	path, err := netrcPath()
 	if err != nil {
 		return "", "", false
-	}
-	path := filepath.Join(home, ".netrc")
-	if runtime.GOOS == "windows" {
-		path = filepath.Join(home, "_netrc")
 	}
 
 	data, err := os.ReadFile(path)
