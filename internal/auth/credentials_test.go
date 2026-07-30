@@ -185,20 +185,6 @@ func TestLoadMissingFileIsNotAnError(t *testing.T) {
 	}
 }
 
-func TestLoadRejectsOverPermissiveFile(t *testing.T) {
-	path := writeCreds(t, "credentials:\n  a.example.com:\n    token: t\n")
-	if err := os.Chmod(path, 0644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := Load(path)
-	if err == nil {
-		t.Fatal("expected error for group/world-readable credentials file")
-	}
-	if !strings.Contains(err.Error(), "chmod 600") {
-		t.Errorf("error should suggest the fix, got: %v", err)
-	}
-}
-
 func TestLoadValidation(t *testing.T) {
 	tests := []struct {
 		name    string

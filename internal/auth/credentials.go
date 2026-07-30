@@ -2,7 +2,6 @@ package auth
 
 import (
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -83,19 +82,11 @@ func Load(path string) (*Store, error) {
 		return nil, err
 	}
 
-	info, err := os.Stat(resolved)
+	data, err := os.ReadFile(resolved)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return store, nil
 		}
-		return nil, fmt.Errorf("credentials file %s: %w", resolved, err)
-	}
-	if err := checkPerms(resolved, info.Mode()); err != nil {
-		return nil, err
-	}
-
-	data, err := os.ReadFile(resolved)
-	if err != nil {
 		return nil, fmt.Errorf("credentials file %s: %w", resolved, err)
 	}
 
@@ -226,16 +217,6 @@ func validHeaderValue(s string) bool {
 		}
 	}
 	return true
-}
-
-// checkPerms rejects a credentials file that is readable by anyone other than
-// its owner, following the convention ssh and curl apply to their own secrets.
-func checkPerms(path string, mode fs.FileMode) error {
-	if mode.Perm()&0o077 != 0 {
-		return fmt.Errorf("credentials file %s has permissions %04o; it must not be readable by group or others (chmod 600 %s)",
-			path, mode.Perm(), path)
-	}
-	return nil
 }
 
 // expandHome resolves a leading ~/ against the user's home directory.

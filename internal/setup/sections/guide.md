@@ -31,11 +31,11 @@ ready to write it.
 
 HTTP sources and the HTTP template functions authenticate from a
 credentials file, by default `~/.mcpsmithy/credentials`. Set
-`project.credentials` to use a different path. The file must not be
-readable by group or others (`chmod 600`), and it belongs outside the
+`project.credentials` to use a different path. Keep it outside the
 project directory: `file_read` is sandboxed to the project root, so a
 credentials file inside it could be read by the agent or indexed by a
-local source glob.
+local source glob. Restricting it to your own user (`chmod 600`) is
+sensible on a shared machine, but is not enforced.
 
 Entries are keyed by hostname. The fields you set determine the header
 that gets sent:
