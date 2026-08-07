@@ -71,6 +71,7 @@ tools:
 				Project: Project{
 					Name:        "test",
 					Description: "test project",
+					Credentials: "~/.mcpsmithy/credentials",
 					Sources: &ProjectSources{
 						PullPolicy: PullPolicyIfNotPresent,
 						Local: map[string]LocalSource{
@@ -155,6 +156,7 @@ tools:
 				Project: Project{
 					Name:        "test",
 					Description: "test project",
+					Credentials: "~/.mcpsmithy/credentials",
 					Sources: &ProjectSources{
 						PullPolicy: PullPolicyAlways,
 						Git: map[string]GitSource{
@@ -227,6 +229,59 @@ tools:
         type: string
 `,
 			wantErr: "typoParam",
+		},
+		{
+			// from_json decodes a runtime payload, so field traversal into its
+			// result cannot be checked against a zero-value context. Such
+			// templates must still load successfully.
+			name: "template indexing a from_json result loads",
+			yaml: `version: "1"
+project:
+  name: test
+  description: d
+tools:
+  parse:
+    description: d
+    template: "{{ $r := from_json .body }}{{ $r.status }}{{ range $r.items }}{{ .id }}{{ end }}"
+    params:
+      - name: body
+        type: string
+`,
+		},
+		{
+			// The Parse pass still applies to from_json templates.
+			name: "from_json template with syntax error still fails",
+			yaml: `version: "1"
+project:
+  name: test
+  description: d
+tools:
+  parse:
+    description: d
+    template: "{{ $r := from_json .body }}{{ if }}"
+    params:
+      - name: body
+        type: string
+`,
+			wantErr: "missing value for if",
+		},
+		{
+			// Undefined function names are a Parse error, so they are still
+			// caught for templates that skip the execution pass.
+			name: "from_json template with undefined func fails",
+			yaml: `version: "1"
+project:
+  name: test
+  description: d
+tools:
+  parse:
+    description: d
+    template: "{{ $r := from_json .body }}{{ nope $r }}"
+    params:
+      - name: body
+        type: string
+`,
+			wantErr: "not defined",
 		},
 	}
 

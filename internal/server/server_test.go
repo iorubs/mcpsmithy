@@ -24,7 +24,7 @@ func newTestEngine(t *testing.T) *tools.Engine {
 			},
 		},
 	}
-	eng, err := tools.New(context.Background(), cfg, t.TempDir())
+	eng, err := tools.New(context.Background(), cfg, t.TempDir(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

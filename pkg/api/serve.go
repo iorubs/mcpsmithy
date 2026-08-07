@@ -27,7 +27,12 @@ func Serve(ctx context.Context, cfg *config.Config, opts ServeOptions) error {
 		return fmt.Errorf("config is nil")
 	}
 
-	eng, err := tools.New(ctx, cfg, opts.Root)
+	creds, err := LoadCredentials(ctx, cfg.Project.Credentials)
+	if err != nil {
+		return err
+	}
+
+	eng, err := tools.New(ctx, cfg, opts.Root, creds)
 	if err != nil {
 		return fmt.Errorf("engine: %w", err)
 	}

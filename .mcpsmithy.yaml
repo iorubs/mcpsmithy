@@ -80,7 +80,8 @@ conventions:
       plus any user params, renders the template, and returns the output.
 
       Built-in template functions: conventions_for, search_for,
-      file_read, http_get, grep. Config authors can compose richer
+      file_read, http_get, http_post, http_put, grep, from_json.
+      Config authors can compose richer
       output using context access ({{ .mcpsmithy.Project }},
       {{ .mcpsmithy.Conventions }}, {{ .mcpsmithy.Tools }},
       {{ .mcpsmithy.Source "name" }}).

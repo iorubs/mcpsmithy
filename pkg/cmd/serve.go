@@ -29,7 +29,12 @@ func (cmd *ServeCmd) Run(ctx context.Context) error {
 
 	opts := api.ServeOptions{Root: root, Transport: cmd.Transport, Addr: cmd.Addr}
 	if cmd.Watch {
-		eng, err := tools.New(ctx, cfg, root)
+		creds, err := api.LoadCredentials(ctx, cfg.Project.Credentials)
+		if err != nil {
+			return err
+		}
+
+		eng, err := tools.New(ctx, cfg, root, creds)
 		if err != nil {
 			return fmt.Errorf("engine: %w", err)
 		}
@@ -97,7 +102,12 @@ func reload(ctx context.Context, path string, srv *server.Server) {
 		slog.ErrorContext(ctx, "reload: config error, keeping previous engine", "err", err)
 		return
 	}
-	eng, err := tools.New(ctx, cfg, root)
+	creds, err := api.LoadCredentials(ctx, cfg.Project.Credentials)
+	if err != nil {
+		slog.ErrorContext(ctx, "reload: credentials error, keeping previous engine", "err", err)
+		return
+	}
+	eng, err := tools.New(ctx, cfg, root, creds)
 	if err != nil {
 		slog.ErrorContext(ctx, "reload: engine build failed, keeping previous engine", "err", err)
 		return

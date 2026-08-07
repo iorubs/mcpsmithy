@@ -25,9 +25,14 @@ func (cmd *SourcesPullCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	creds, err := api.LoadCredentials(ctx, cfg.Project.Credentials)
+	if err != nil {
+		return err
+	}
+
 	slog.InfoContext(ctx, "pull starting", "config", cmd.Config, "root", root)
 
-	project.Build(ctx, cfg, root, project.BuildOptions{SkipIndex: true})
+	project.Build(ctx, cfg, root, project.BuildOptions{SkipIndex: true, Credentials: creds})
 
 	slog.InfoContext(ctx, "pull complete")
 	return nil

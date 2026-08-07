@@ -49,6 +49,7 @@ const (
 	BuiltinFuncHTTPPost       = v1.BuiltinFuncHTTPPost
 	BuiltinFuncHTTPPut        = v1.BuiltinFuncHTTPPut
 	BuiltinFuncGrep           = v1.BuiltinFuncGrep
+	BuiltinFuncFromJSON       = v1.BuiltinFuncFromJSON
 )
 
 // Versions is the single source of truth for which schema versions are

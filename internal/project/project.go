@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iorubs/mcpsmithy/internal/auth"
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/project/sources"
 	"github.com/iorubs/mcpsmithy/internal/search"
@@ -26,6 +27,7 @@ type indexManager struct {
 	cfg         *config.Config
 	projectRoot string
 	reg         *sources.Registry
+	creds       *auth.Store
 }
 
 // BuildOptions configures the behaviour of Build.
@@ -38,6 +40,10 @@ type BuildOptions struct {
 	// default registry (populated by init) is used. Tests can pass
 	// a cloned registry to inject fakes without mutating globals.
 	Registry *sources.Registry
+
+	// Credentials supplies auth for sources that make outbound requests.
+	// When nil those sources send no credentials.
+	Credentials *auth.Store
 }
 
 // sourceEntry represents a single source in the unified pipeline.
@@ -73,9 +79,10 @@ func Build(ctx context.Context, cfg *config.Config, projectRoot string, opts Bui
 		cfg:         cfg,
 		projectRoot: projectRoot,
 		reg:         reg,
+		creds:       opts.Credentials,
 	}
 
-	entries := sourceEntries(cfg, projectRoot, sourcesDir, reg)
+	entries := sourceEntries(cfg, projectRoot, sourcesDir, reg, opts.Credentials)
 
 	done := make(chan struct{})
 
@@ -168,7 +175,7 @@ func (m *indexManager) refreshLoop(ctx context.Context, interval time.Duration) 
 
 			fresh := &indexManager{idx: search.NewLiveIndex(), cfg: m.cfg, projectRoot: m.projectRoot, reg: m.reg}
 			base := filepath.Join(m.projectRoot, sourcesDir)
-			entries := sourceEntries(m.cfg, m.projectRoot, base, m.reg)
+			entries := sourceEntries(m.cfg, m.projectRoot, base, m.reg, m.creds)
 			fresh.processSources(ctx, entries, false)
 			m.idx.Swap(fresh.idx.Get())
 			slog.InfoContext(ctx, "refresh complete", "chunks", m.idx.Len())
@@ -178,7 +185,8 @@ func (m *indexManager) refreshLoop(ctx context.Context, interval time.Duration) 
 
 // sourceEntries builds the unified source list from all sections of the config.
 // base is the root directory where fetched remote sources are stored.
-func sourceEntries(cfg *config.Config, projectRoot, base string, reg *sources.Registry) []sourceEntry {
+// creds is handed to sources that authenticate outbound requests; it may be nil.
+func sourceEntries(cfg *config.Config, projectRoot, base string, reg *sources.Registry, creds *auth.Store) []sourceEntry {
 	if cfg.Project.Sources == nil {
 		return nil
 	}
@@ -193,6 +201,9 @@ func sourceEntries(cfg *config.Config, projectRoot, base string, reg *sources.Re
 		src, meta, err := factory(name, raw, projectRoot, base, global)
 		if err != nil {
 			return
+		}
+		if c, ok := src.(sources.CredentialConsumer); ok {
+			c.SetCredentials(creds)
 		}
 		entries = append(entries, sourceEntry{
 			name:       name,

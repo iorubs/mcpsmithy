@@ -27,7 +27,7 @@ func TestApplyNetrcAuth(t *testing.T) {
 
 	t.Run("bearer when login is token", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "https://bearer.example.com/v1/foo", nil)
-		ApplyNetrcAuth(req)
+		applyNetrcAuth(req)
 		if got := req.Header.Get("Authorization"); got != "Bearer tok123" {
 			t.Errorf("Authorization = %q, want %q", got, "Bearer tok123")
 		}
@@ -35,7 +35,7 @@ func TestApplyNetrcAuth(t *testing.T) {
 
 	t.Run("basic when login is a username", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "https://basic.example.com/v1/foo", nil)
-		ApplyNetrcAuth(req)
+		applyNetrcAuth(req)
 		want := "Basic " + base64Encode("myuser:mypass")
 		if got := req.Header.Get("Authorization"); got != want {
 			t.Errorf("Authorization = %q, want %q", got, want)
@@ -44,7 +44,7 @@ func TestApplyNetrcAuth(t *testing.T) {
 
 	t.Run("bearer when login is empty", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "https://bare.example.com/v1/foo", nil)
-		ApplyNetrcAuth(req)
+		applyNetrcAuth(req)
 		if got := req.Header.Get("Authorization"); got != "Bearer baretoken" {
 			t.Errorf("Authorization = %q, want %q", got, "Bearer baretoken")
 		}
@@ -52,7 +52,7 @@ func TestApplyNetrcAuth(t *testing.T) {
 
 	t.Run("no header when host not in netrc", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "https://other.example.com/v1/foo", nil)
-		ApplyNetrcAuth(req)
+		applyNetrcAuth(req)
 		if got := req.Header.Get("Authorization"); got != "" {
 			t.Errorf("Authorization = %q, want empty", got)
 		}

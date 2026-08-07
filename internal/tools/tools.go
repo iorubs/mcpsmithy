@@ -9,6 +9,7 @@ import (
 	"text/template"
 	"unicode/utf8"
 
+	"github.com/iorubs/mcpsmithy/internal/auth"
 	"github.com/iorubs/mcpsmithy/internal/config"
 	"github.com/iorubs/mcpsmithy/internal/conventions"
 	"github.com/iorubs/mcpsmithy/internal/project"
@@ -26,15 +27,17 @@ type Engine struct {
 }
 
 // New builds an engine from the loaded config.
-func New(ctx context.Context, cfg *config.Config, root string) (*Engine, error) {
+// creds supplies credentials to the HTTP template functions and to sources that
+// make authenticated requests; a nil store sends no credentials.
+func New(ctx context.Context, cfg *config.Config, root string, creds *auth.Store) (*Engine, error) {
 	sb, err := newSandbox(root)
 	if err != nil {
 		return nil, fmt.Errorf("sandbox: %w", err)
 	}
 
-	idxMgr, _ := project.Build(ctx, cfg, sb.Root(), project.BuildOptions{})
+	idxMgr, _ := project.Build(ctx, cfg, sb.Root(), project.BuildOptions{Credentials: creds})
 	convIdx := conventions.BuildIndex(ctx, cfg)
-	tpl := newTemplateEngine(cfg, sb.Root(), cfg.Conventions, idxMgr, convIdx, sb.fsys)
+	tpl := newTemplateEngine(cfg, sb.Root(), cfg.Conventions, idxMgr, convIdx, sb.fsys, creds)
 
 	e := &Engine{
 		cfg:      cfg,

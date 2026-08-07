@@ -44,6 +44,14 @@ type Project struct {
 	// Sources with index: true (default) are searchable via search_for;
 	// sources with index: false describe project structure without being searchable.
 	Sources *ProjectSources `yaml:"sources,omitempty"`
+	// Path to the credentials file used to authenticate outbound HTTP requests
+	// from http sources and the HTTP template functions. A leading ~ expands to
+	// the user's home directory.
+	// Keep this outside the project directory: file_read is sandboxed to the
+	// project root, so a credentials file inside it could be read by the agent
+	// or indexed by a local source glob.
+	// A missing file is not an error; hosts without an entry fall back to ~/.netrc.
+	Credentials string `yaml:"credentials,omitempty" mcpsmithy:"default=~/.mcpsmithy/credentials"`
 }
 
 // ProjectSources groups content the AI can search or reference.
@@ -151,13 +159,15 @@ type GitSource struct {
 // archives. Works with any authenticated HTTP(S) endpoint: forge archive
 // URLs, private APIs, artifact stores, etc.
 //
-// Authentication is automatic via .netrc; custom headers can be added for
-// bearer tokens or API keys.
+// Authentication is automatic via the credentials file (see project.credentials),
+// falling back to .netrc. Custom headers can be added for cases it does not cover.
 type HTTPSource struct {
 	// HTTP(S) URL to fetch.
 	URL string `yaml:"url" mcpsmithy:"required"`
 	// Custom HTTP headers (e.g. Authorization).
-	// Applied alongside .netrc credentials; explicit headers take precedence.
+	// Applied after resolved credentials, so an explicit header takes precedence.
+	// Prefer the credentials file for secrets: values here live in the committed
+	// config, which the agent can read.
 	Headers map[string]string `yaml:"headers,omitempty"`
 	// Glob patterns within the fetched content.
 	// For archives these match extracted files; for single files they match the saved filename.
@@ -261,6 +271,8 @@ type Tool struct {
 // zero-value context built from its declared params and options.
 // This catches syntax errors, arity mismatches, and undeclared variable
 // references in a single pass. Called by schema.Process at parse time.
+//
+// Templates that call from_json skip the execution pass; see fromJSONSkipsDryRun.
 func (t Tool) Validate() error {
 	if t.Template == "" {
 		return nil
@@ -287,15 +299,39 @@ func (t Tool) Validate() error {
 		string(BuiltinFuncHTTPPost):       func(string, string, ...any) (string, error) { return "", nil },
 		string(BuiltinFuncHTTPPut):        func(string, string, ...any) (string, error) { return "", nil },
 		string(BuiltinFuncGrep):           func(string, float64, float64, string) string { return "" },
+		string(BuiltinFuncFromJSON):       func(string) (any, error) { return nil, nil },
 	}).Option("missingkey=error").Parse(string(t.Template))
 	if err != nil {
 		return err
+	}
+	if fromJSONSkipsDryRun(string(t.Template)) {
+		return nil
 	}
 	var sb strings.Builder
 	if err := parsed.Execute(&sb, ctx); err != nil {
 		return fmt.Errorf("template dry-run: %w", err)
 	}
 	return nil
+}
+
+// fromJSONSkipsDryRun reports whether tpl calls from_json, in which case the
+// dry-run execution pass is skipped.
+//
+// from_json decodes a runtime payload, so the shape of its result is unknowable
+// at parse time and no stub value can stand in for it. Under missingkey=error
+// every traversal fails outright. Relaxing to missingkey=zero rescues field
+// access and range, but no stub survives both of the common shapes: a nil stub
+// fails `index $r "key"` ("index of untyped nil"), while an empty-map stub fails
+// nested access such as `$r.a.b.c` ("nil pointer evaluating interface {}.b").
+//
+// Rejecting a valid config is worse than missing a check, so the execution pass
+// is skipped rather than run against a stub that would produce false failures.
+// Parse still runs, catching syntax errors and undefined function names. The
+// forfeited checks are the undeclared-variable check and argument-count
+// validation, both of which text/template performs during execution; for these
+// templates they surface on the first tool call instead of at config load.
+func fromJSONSkipsDryRun(tpl string) bool {
+	return strings.Contains(tpl, string(BuiltinFuncFromJSON))
 }
 
 // ToolParam declares an input the AI provides when calling a tool.
@@ -353,7 +389,7 @@ type ParamConstraints struct {
 // TemplateString is the template body for a tool. It uses Go text/template
 // syntax with access to the project context via `{{ .mcpsmithy }}`, declared
 // params and options as `{{ .paramName }}`, and built-in functions like
-// conventions_for, search_for, file_read, http_get, and grep.
+// conventions_for, search_for, file_read, http_get, grep, and from_json.
 type TemplateString string
 
 // BuiltinFunc names a template function available inside tool templates.
@@ -368,14 +404,16 @@ const (
 	BuiltinFuncSearchFor BuiltinFunc = "search_for"
 	// func(path string, [maxFileSize int]) string; Reads local files matching a glob pattern within the project sandbox.
 	BuiltinFuncFileRead BuiltinFunc = "file_read"
-	// func(url string, [maxReadKB int]) (string, error); HTTP GET with .netrc auth and ANSI stripping. Caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	// func(url string, [maxReadKB int]) (string, error); HTTP GET with credentials-file auth (falling back to .netrc) and ANSI stripping. Caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPGet BuiltinFunc = "http_get"
-	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error); HTTP POST with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error); HTTP POST with credentials-file auth (falling back to .netrc). Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPPost BuiltinFunc = "http_post"
-	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error); HTTP PUT with .netrc auth. Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
+	// func(url string, body string, [contentType string], [maxReadKB int]) (string, error); HTTP PUT with credentials-file auth (falling back to .netrc). Sends body with the given content type (default "application/json"), accepts any 2xx response, caps the response body at maxReadKB KB (default 10240). Set the urlAllowList option to restrict which hosts can be reached.
 	BuiltinFuncHTTPPut BuiltinFunc = "http_put"
 	// func(pattern string, before float64, after float64, input string) string; Filters input by regex pattern with context lines.
 	BuiltinFuncGrep BuiltinFunc = "grep"
+	// func(s string) (any, error); Parses a JSON string into a value templates can index and range over. Returns an error when the input is not valid JSON.
+	BuiltinFuncFromJSON BuiltinFunc = "from_json"
 )
 
 // zeroForParamType delegates to schema.ZeroForParamType.

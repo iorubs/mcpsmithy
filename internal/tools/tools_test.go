@@ -15,7 +15,7 @@ import (
 func testEngine(t *testing.T, cfg *config.Config) *Engine {
 	t.Helper()
 	dir := t.TempDir()
-	eng, err := New(context.Background(), cfg, dir)
+	eng, err := New(context.Background(), cfg, dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func testEngineFS(t *testing.T, cfg *config.Config, fsys fs.FS) *Engine {
 	sb := &sandbox{root: "/project", fsys: fsys}
 	idx, _ := project.Build(context.Background(), cfg, sb.Root(), project.BuildOptions{})
 	convIdx := conventions.BuildIndex(context.Background(), cfg)
-	tpl := newTemplateEngine(cfg, sb.Root(), cfg.Conventions, idx, convIdx, sb.fsys)
+	tpl := newTemplateEngine(cfg, sb.Root(), cfg.Conventions, idx, convIdx, sb.fsys, nil)
 
 	e := &Engine{
 		cfg:      cfg,
@@ -84,7 +84,7 @@ func TestNew(t *testing.T) {
 				Tools:   tt.tools,
 			}
 			dir := t.TempDir()
-			eng, err := New(context.Background(), cfg, dir)
+			eng, err := New(context.Background(), cfg, dir, nil)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
@@ -295,6 +295,70 @@ func TestExecuteGrepWithFloat64Params(t *testing.T) {
 	}
 	if !strings.Contains(out, "TARGET") {
 		t.Errorf("expected output to contain 'TARGET', got: %q", out)
+	}
+}
+
+// TestExecuteFromJSON verifies from_json renders through a real tool, letting a
+// template index into and range over a decoded payload.
+func TestExecuteFromJSON(t *testing.T) {
+	cfg := &config.Config{
+		Version: "1",
+		Project: config.Project{Name: "test"},
+		Tools: map[string]config.Tool{
+			"parse": {
+				Description: "test",
+				Template: `{{ $r := from_json .body }}Status: {{ $r.status }}
+{{ range $r.items }}- {{ .id }}: {{ .title }}
+{{ end }}`,
+				Params: []config.ToolParam{
+					{Name: "body", Type: config.ParamTypeString, Required: true},
+				},
+			},
+		},
+	}
+	eng := testEngine(t, cfg)
+	out, err := eng.Execute(context.Background(), "parse", map[string]any{
+		"body": `{"status":"open","items":[{"id":1,"title":"first"},{"id":2,"title":"second"}]}`,
+	})
+	if err != nil {
+		t.Fatalf("Execute with from_json failed: %v", err)
+	}
+	for _, want := range []string{"Status: open", "first", "second"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected output to contain %q, got: %q", want, out)
+		}
+	}
+	// Numbers decode as float64; confirm they render without scientific notation.
+	if !strings.Contains(out, "- 1:") {
+		t.Errorf("expected integer-looking id in output, got: %q", out)
+	}
+}
+
+// TestExecuteFromJSONInvalid verifies a non-JSON body fails the tool call rather
+// than silently rendering nothing.
+func TestExecuteFromJSONInvalid(t *testing.T) {
+	cfg := &config.Config{
+		Version: "1",
+		Project: config.Project{Name: "test"},
+		Tools: map[string]config.Tool{
+			"parse": {
+				Description: "test",
+				Template:    `{{ $r := from_json .body }}{{ $r.status }}`,
+				Params: []config.ToolParam{
+					{Name: "body", Type: config.ParamTypeString, Required: true},
+				},
+			},
+		},
+	}
+	eng := testEngine(t, cfg)
+	_, err := eng.Execute(context.Background(), "parse", map[string]any{
+		"body": "<html>401 Unauthorized</html>",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-JSON body")
+	}
+	if !strings.Contains(err.Error(), "from_json") {
+		t.Errorf("expected error to name from_json, got: %v", err)
 	}
 }
 
