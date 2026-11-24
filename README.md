@@ -15,7 +15,7 @@
 # Build
 docker build -t mcpsmithy:latest .
 
-# Or from source (Go 1.26+)
+# Or from source (Go 1.27+)
 go build -o bin/mcpsmithy ./cmd/mcpsmithy
 ```
 
